@@ -64,31 +64,6 @@ router.post('/login', async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
-    // Blogger hardcoded credentials (for initial setup / recovery)
-    if (email === config.bloggerEmail && password === config.bloggerPassword) {
-      let userRow = await queryOne('SELECT * FROM users WHERE email = $1', [email]) as unknown as UserRow | undefined;
-      if (!userRow) {
-        const passwordHash = bcrypt.hashSync(config.bloggerPassword, 10);
-        const result = await execute(
-          'INSERT INTO users (username, email, password_hash, role, bio, nickname) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-          ['HapLotes405', email, passwordHash, 'blogger', 'Wiki owner & blogger', 'HapLotes405']
-        );
-        userRow = await queryOne('SELECT * FROM users WHERE id = $1', [result.rows[0].id]) as unknown as UserRow;
-      }
-
-      const user = userRowToUser(userRow!);
-      const tokenPayload: AuthPayload = {
-        userId: Number(userRow!.id),
-        email: userRow!.email,
-        role: userRow!.role,
-      };
-      const token = generateToken(tokenPayload);
-
-      res.json({ success: true, data: { token, user } });
-      return;
-    }
-
-    // Normal login flow
     const userRow = await queryOne('SELECT * FROM users WHERE email = $1', [email]) as unknown as UserRow | undefined;
     if (!userRow) {
       res.status(401).json({ success: false, message: '邮箱或密码错误' });
