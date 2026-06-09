@@ -11,14 +11,28 @@ pool.on('error', (err) => {
   console.error('[DB] Unexpected pool error:', err.message);
 });
 
-/** Test connection and initialize */
-export async function initDb(): Promise<void> {
-  const client = await pool.connect();
-  try {
-    await client.query('SELECT 1');
-    console.log('[DB] PostgreSQL connected.');
-  } finally {
-    client.release();
+/** Test connection and initialize, with retry for Docker startup ordering */
+export async function initDb(retries = 10, delayMs = 3000): Promise<void> {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const client = await pool.connect();
+      try {
+        await client.query('SELECT 1');
+        console.log('[DB] PostgreSQL connected.');
+        return;
+      } finally {
+        client.release();
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (attempt < retries) {
+        console.warn(`[DB] Connection attempt ${attempt}/${retries} failed: ${msg}. Retrying in ${delayMs}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      } else {
+        console.error(`[DB] All ${retries} connection attempts failed.`);
+        throw err;
+      }
+    }
   }
 }
 

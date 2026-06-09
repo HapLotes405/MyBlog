@@ -1,0 +1,122 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE: ghcr.io/haplotes405/myblog-backend
+  FRONTEND_IMAGE: ghcr.io/haplotes405/myblog-frontend
+
+jobs:
+  # ============================================================
+  # Job 1: Type-check & build (lightweight, no Docker)
+  # ============================================================
+  verify:
+    name: Verify (Build + TypeCheck)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [backend, frontend]
+    defaults:
+      run:
+        working-directory: ./${{ matrix.project }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: ${{ matrix.project }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript compile
+        if: matrix.project == 'backend'
+        run: npm run build
+
+      - name: Next.js build
+        if: matrix.project == 'frontend'
+        run: npm run build
+
+  # ============================================================
+  # Job 2: Build & push Docker images (master only)
+  # ============================================================
+  docker:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: verify
+    if: github.ref == 'refs/heads/master'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ---- Backend ----
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.BACKEND_IMAGE }}:latest
+            ${{ env.BACKEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # ---- Frontend ----
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.FRONTEND_IMAGE }}:latest
+            ${{ env.FRONTEND_IMAGE }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ============================================================
+  # Job 3: Result summary
+  # ============================================================
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [verify, docker]
+    if: always()
+    steps:
+      - name: CI passed
+        if: needs.verify.result == 'success'
+        run: echo "✅ Verify passed"
+
+      - name: Docker pushed
+        if: needs.docker.result == 'success'
+        run: echo "🐳 Docker images pushed to ${{ env.REGISTRY }}"
+
+      - name: Full pipeline passed
+        if: needs.docker.result == 'success'
+        run: |
+          echo ""
+          echo "============================================"
+          echo "  Images published:"
+          echo "  ${{ env.BACKEND_IMAGE }}:latest"
+          echo "  ${{ env.FRONTEND_IMAGE }}:latest"
+          echo "============================================"

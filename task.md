@@ -161,20 +161,39 @@
 
 ---
 
-## Phase 5: Docker 容器化与部署（后续）
+## Phase 5: Docker 容器化与部署 ⏳ 进行中（2026-06-08）
 
 ### 5.1 Docker 配置
-- [ ] 前端 Dockerfile
-- [ ] 后端 Dockerfile
-- [ ] docker-compose.yml（前端 + 后端 + 数据库）
-- [ ] Nginx 反向代理配置
+- [x] 前端 Dockerfile — `frontend/Dockerfile`（多阶段构建，Next.js standalone 输出）
+- [x] 后端 Dockerfile — `backend/Dockerfile`（多阶段构建，tsc → Alpine 生产镜像）
+- [x] docker-compose.yml — 3 服务编排（db + backend + frontend，含健康检查 + 数据卷）
+- [x] `.env.docker` — Docker 环境变量模板
+- [x] `.dockerignore` — 排除 node_modules / .next / dist / Janus 等
+- [x] `frontend/.env.production` — 前端生产环境变量
+- [x] 代码适配修复：
+  - [x] `frontend/next.config.ts` — 启用 `output: 'standalone'`
+  - [x] `frontend/src/components/blog/editor/BlogEditor.tsx:198` — 修复硬编码 localhost:8000
+  - [x] `backend/src/index.ts:29` — CORS origin 改为从 `CORS_ORIGIN` 环境变量读取
+- [ ] Nginx 反向代理配置（后续）
 
-### 5.2 CI/CD
+### 5.2 环境安装
+- [x] Docker Desktop v29.5.2 安装
+- [x] WSL 2 v2.7.3 安装
+- [ ] Docker Desktop 首次启动设置（需用户手动接受协议 + 完成初始化向导）
+
+### 5.3 构建与验证（WSL 就绪后执行）
+- [ ] `docker compose build` — 构建前后端镜像
+- [ ] `docker compose up -d` — 启动全部服务
+- [ ] 后端健康检查 `GET /api/health`
+- [ ] 前端页面可访问验证
+- [ ] 完整功能联调（注册 → 登录 → 发文章 → 评论 → 点赞收藏）
+
+### 5.4 CI/CD
 - [ ] GitHub Actions 或类似 CI 配置
 - [ ] 自动化测试与构建
 - [ ] 自动部署脚本
 
-### 5.3 服务器部署
+### 5.5 服务器部署
 - [ ] 域名配置（可通过域名访问）
 - [ ] 服务器选型与购买（与用户交流配置）
 - [ ] 一键迁移部署脚本
@@ -220,7 +239,38 @@
 - **Phase 2**: ✅ 完成（2026-05-29）
 - **Phase 3**: ✅ 完成（2026-05-29）
 - **Phase 4**: ✅ 完成（2026-06-01）— Node.js + TypeScript 后端开发 + 前后端对接
-- **Phase 5**: ⏳ 待开始 — Docker & 部署
+- **Phase 5**: ⏳ 进行中 — Docker 配置已完成，环境已安装，等待 Docker Desktop 首次初始化后构建部署
+
+---
+
+## Docker 新增文件清单（2026-06-08）
+
+```
+/
+├── docker-compose.yml           # 3 服务编排（db + backend + frontend）
+├── .dockerignore                # 排除 node_modules / .next / dist / Janus 等
+├── .env.docker                  # Docker 环境变量模板（复制为 .env 使用）
+├── backend/
+│   └── Dockerfile               # 后端多阶段构建（tsc → Alpine）
+└── frontend/
+    ├── Dockerfile               # 前端多阶段构建（Next.js standalone）
+    └── .env.production          # NEXT_PUBLIC_API_URL
+```
+
+### Docker 部署速查
+
+```bash
+# 首次部署
+cp .env.docker .env              # 编辑 .env 修改密码密钥
+docker compose up -d              # 启动全部服务
+docker compose exec backend node dist/db/seed.js  # 初始化博主账号
+
+# 日常操作
+docker compose up -d              # 启动
+docker compose down               # 停止
+docker compose down -v            # 停止并清除数据卷
+docker compose build --no-cache   # 强制重建镜像
+```
 - **Phase 6**: ⏳ 待开始 — 进阶功能
 
 ---
@@ -302,4 +352,4 @@
 
 ---
 
-*最后更新: 2026-06-01*
+*最后更新: 2026-06-08 —— Phase 5 Docker 配置完成，环境已安装，等待 Docker Desktop 首次初始化*

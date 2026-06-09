@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Environment files (contains secrets)
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+.next/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Uploads (runtime data)
+uploads/*
+!uploads/.gitkeep
+
+# Docker Compose overrides
+docker-compose.override.yml
