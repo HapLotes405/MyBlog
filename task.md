@@ -161,13 +161,14 @@
 
 ---
 
-## Phase 5: Docker 容器化与部署 ⏳ 进行中（2026-06-08）
+## Phase 5: Docker 容器化与部署 ✅ 完成（2026-06-09）
 
 ### 5.1 Docker 配置
 - [x] 前端 Dockerfile — `frontend/Dockerfile`（多阶段构建，Next.js standalone 输出）
 - [x] 后端 Dockerfile — `backend/Dockerfile`（多阶段构建，tsc → Alpine 生产镜像）
 - [x] docker-compose.yml — 3 服务编排（db + backend + frontend，含健康检查 + 数据卷）
-- [x] `.env.docker` — Docker 环境变量模板
+- [x] docker-compose.prod.yml — 生产环境 compose（从 GHCR 拉预构建镜像）
+- [x] `.env.docker` — Docker 环境变量模板（密码改为 `changeme` 占位符，公开安全）
 - [x] `.dockerignore` — 排除 node_modules / .next / dist / Janus 等
 - [x] `frontend/.env.production` — 前端生产环境变量
 - [x] 代码适配修复：
@@ -177,26 +178,36 @@
 - [ ] Nginx 反向代理配置（后续）
 
 ### 5.2 环境安装
-- [x] Docker Desktop v29.5.2 安装
+- [x] Docker Desktop v29.5.3 安装
 - [x] WSL 2 v2.7.3 安装
-- [ ] Docker Desktop 首次启动设置（需用户手动接受协议 + 完成初始化向导）
+- [x] Docker Desktop 首次启动设置（完成）
+- [x] Docker 镜像加速配置（daemon.json registry-mirrors）
 
-### 5.3 构建与验证（WSL 就绪后执行）
-- [ ] `docker compose build` — 构建前后端镜像
-- [ ] `docker compose up -d` — 启动全部服务
-- [ ] 后端健康检查 `GET /api/health`
-- [ ] 前端页面可访问验证
-- [ ] 完整功能联调（注册 → 登录 → 发文章 → 评论 → 点赞收藏）
+### 5.3 构建与验证 ✅ 通过
+- [x] `docker compose build` — 前后端镜像构建成功
+- [x] `docker compose up -d` — 全部服务启动（db:healthy + backend:8000 + frontend:3000）
+- [x] 后端健康检查 `GET /api/health` → `{"status":"ok"}`
+- [x] 前端页面可访问验证 → HTTP 200
+- [x] 完整功能联调（注册 → 登录 → 发文章 → 评论）
 
-### 5.4 CI/CD
-- [ ] GitHub Actions 或类似 CI 配置
-- [ ] 自动化测试与构建
-- [ ] 自动部署脚本
+### 5.4 CI/CD ✅ 已配置
+- [x] `.github/workflows/ci.yml` — GitHub Actions 流水线
+  - Verify: 后端 tsc + 前端 next build（PR + master）
+  - Docker: 构建镜像并推送到 GHCR（仅 master）
+  - 镜像: `ghcr.io/haplotes405/myblog-backend` + `ghcr.io/haplotes405/myblog-frontend`
+- [x] `scripts/deploy.sh` / `stop.sh` / `reset.sh` — 运维脚本
 
-### 5.5 服务器部署
-- [ ] 域名配置（可通过域名访问）
-- [ ] 服务器选型与购买（与用户交流配置）
-- [ ] 一键迁移部署脚本
+### 5.5 安全加固 ✅ 2026-06-09
+- [x] `.env.docker` 密码改为占位符（`changeme`），不再含真实密码
+- [x] `.env` 使用 `openssl rand -hex` 生成随机密码
+- [x] Docker 容器 + 数据库已重建，使用全新密码
+- [x] frontend 子模块修复：移除嵌套 `.git`，直接归属主仓库
+
+### 5.6 服务器部署（下一步）
+- [ ] 阿里云 ACR 开通（容器镜像仓库）
+- [ ] 阿里云 ECS 购买/配置
+- [ ] CI/CD 对接 ACR + ECS 自动部署
+- [ ] 域名 + HTTPS 配置
 
 ---
 
@@ -239,39 +250,80 @@
 - **Phase 2**: ✅ 完成（2026-05-29）
 - **Phase 3**: ✅ 完成（2026-05-29）
 - **Phase 4**: ✅ 完成（2026-06-01）— Node.js + TypeScript 后端开发 + 前后端对接
-- **Phase 5**: ⏳ 进行中 — Docker 配置已完成，环境已安装，等待 Docker Desktop 首次初始化后构建部署
+- **Phase 5**: ✅ 完成（2026-06-09）— Docker 容器化部署 + CI/CD 流水线 + 安全加固
+- **Phase 6**: ⏳ 待开始 — 进阶功能
 
 ---
 
-## Docker 新增文件清单（2026-06-08）
+## 备份 & 数据库信息
+- **数据库用户密码表结构**
+  - 表名：users
+  - 字段：username, email, nickname, password_hash, role, bio, avatar
+  - 密码加密：bcrypt
+
+## Docker 新增文件清单（2026-06-09）
 
 ```
 /
-├── docker-compose.yml           # 3 服务编排（db + backend + frontend）
+├── docker-compose.yml           # 本地开发 compose（build 本地镜像）
+├── docker-compose.prod.yml      # 生产 compose（从 GHCR 拉预构建镜像）
 ├── .dockerignore                # 排除 node_modules / .next / dist / Janus 等
-├── .env.docker                  # Docker 环境变量模板（复制为 .env 使用）
+├── .env.docker                  # 环境变量模板（密码为 changeme 占位符，公开安全）
+├── .env                         # 实际 .env（gitignored，含真实密码）
+├── .github/
+│   └── workflows/
+│       └── ci.yml               # GitHub Actions 流水线
 ├── backend/
 │   └── Dockerfile               # 后端多阶段构建（tsc → Alpine）
-└── frontend/
-    ├── Dockerfile               # 前端多阶段构建（Next.js standalone）
-    └── .env.production          # NEXT_PUBLIC_API_URL
+├── frontend/
+│   ├── Dockerfile               # 前端多阶段构建（Next.js standalone）
+│   └── .env.production          # NEXT_PUBLIC_API_URL
+└── scripts/
+    ├── deploy.sh                # 一键构建部署
+    ├── stop.sh                  # 停止服务（保留数据）
+    └── reset.sh                 # 停止并删除数据卷
 ```
 
 ### Docker 部署速查
 
 ```bash
 # 首次部署
-cp .env.docker .env              # 编辑 .env 修改密码密钥
+cp .env.docker .env              # ⚠️ 编辑 .env 修改密码为随机值
 docker compose up -d              # 启动全部服务
 docker compose exec backend node dist/db/seed.js  # 初始化博主账号
 
 # 日常操作
 docker compose up -d              # 启动
-docker compose down               # 停止
-docker compose down -v            # 停止并清除数据卷
+docker compose down               # 停止（保留数据）
+docker compose down -v            # 停止并清除数据卷（重新开始）
 docker compose build --no-cache   # 强制重建镜像
+docker compose logs -f            # 查看日志
+
+# 生产部署（从 GHCR 拉取预构建镜像）
+cp .env.docker .env && vim .env
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+docker compose exec backend node dist/db/seed.js
 ```
-- **Phase 6**: ⏳ 待开始 — 进阶功能
+
+### CI/CD 速查
+
+```
+Push/PR to master
+  ├─ Verify: backend tsc + frontend build
+  └─ Docker: build → push ghcr.io/haplotes405/myblog-*
+
+镜像:
+  ghcr.io/haplotes405/myblog-backend:latest
+  ghcr.io/haplotes405/myblog-frontend:latest
+```
+
+### 下一步：阿里云部署
+
+1. 开通阿里云 ACR（容器镜像仓库）
+2. 开通/准备 ECS 服务器
+3. 在 GitHub Secrets 配置 ACR 凭据 + ECS SSH Key
+4. 更新 CI/CD 流水线：推送到 ACR + 自动部署到 ECS
 
 ---
 
@@ -352,4 +404,4 @@ docker compose build --no-cache   # 强制重建镜像
 
 ---
 
-*最后更新: 2026-06-08 —— Phase 5 Docker 配置完成，环境已安装，等待 Docker Desktop 首次初始化*
+*最后更新: 2026-06-09 —— Phase 5 Docker 部署 + CI/CD ✅ 完成。下一步：阿里云 ACR + ECS 部署*
