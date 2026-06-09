@@ -175,7 +175,11 @@
   - [x] `frontend/next.config.ts` — 启用 `output: 'standalone'`
   - [x] `frontend/src/components/blog/editor/BlogEditor.tsx:198` — 修复硬编码 localhost:8000
   - [x] `backend/src/index.ts:29` — CORS origin 改为从 `CORS_ORIGIN` 环境变量读取
-- [ ] Nginx 反向代理配置（后续）
+- [x] Nginx 反向代理（nginx/nginx.conf + nginx/conf.d/default.conf + SSL 模板）
+- [x] 后端健康检查（healthcheck: Node.js HTTP GET /api/health）
+- [x] 所有容器日志轮转（json-file 10MB × 3）
+- [x] 数据库自动备份服务（每日凌晨3点，保留7天）+ backup/ 脚本
+- [x] Docker 镜像优化（单次 npm install + prune，前端 250MB→225MB）
 
 ### 5.2 环境安装
 - [x] Docker Desktop v29.5.3 安装
@@ -278,6 +282,17 @@
 ├── frontend/
 │   ├── Dockerfile               # 前端多阶段构建（Next.js standalone）
 │   └── .env.production          # NEXT_PUBLIC_API_URL
+├── nginx/
+│   ├── nginx.conf                # 主配置（gzip、安全头、upstream）
+│   ├── conf.d/
+│   │   ├── default.conf          # HTTP 站点（/api→backend, /→frontend）
+│   │   └── ssl.conf.example     # HTTPS 模板（TLS 1.2/1.3）
+│   └── ssl/
+│       └── generate-certs.sh     # 自签名证书生成
+├── backup/
+│   ├── backup.sh                 # 容器内备份
+│   ├── restore.sh                # 容器内恢复
+│   └── docker-backup.sh          # 宿主机一键备份
 └── scripts/
     ├── deploy.sh                # 一键构建部署
     ├── stop.sh                  # 停止服务（保留数据）
@@ -404,4 +419,38 @@ Push/PR to master
 
 ---
 
-*最后更新: 2026-06-09 —— Phase 5 Docker 部署 + CI/CD ✅ 完成。下一步：阿里云 ACR + ECS 部署*
+*最后更新: 2026-06-09 —— Phase 5 Docker 部署 + CI/CD ✅ 完成。安全加固 ✅。下一步：阿里云 ACR + ECS 部署*
+
+---
+
+## 环境变量 & 账号
+
+| 配置项 | 值 | 安全 |
+|--------|-----|------|
+| DB_USER | postgres | 公开 |
+| DB_PASSWORD | (随机 SHA256) | `.env` 保护 |
+| JWT_SECRET | (随机 SHA256) | `.env` 保护 |
+| BLOGGER_EMAIL | 3250104093@zju.edu.cn | 公开 |
+| BLOGGER_PASSWORD | syx11561156 | `.env` 保护 |
+| CORS_ORIGIN | http://localhost | 公开 |
+
+### Docker 部署速查（更新）
+
+```bash
+# 首次部署
+cp .env.docker .env              # ⚠️ 编辑 .env 修改密码为随机值
+docker compose up -d              # 启动全部服务（含 nginx）
+docker compose exec backend node dist/db/seed.js  # 初始化博主账号
+
+# 日常操作
+docker compose up -d              # 启动
+docker compose down               # 停止（保留数据）
+docker compose logs -f backend    # 查看后端日志
+sh backup/docker-backup.sh        # 手动备份数据库
+
+# 生产部署（从 GHCR 拉取预构建镜像）
+cp .env.docker .env && vim .env
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+docker compose exec backend node dist/db/seed.js
+```
