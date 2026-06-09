@@ -3,7 +3,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm ci
+RUN npm ci --no-optional && npm cache clean --force
 
 # Build-time env vars — Next.js inlines NEXT_PUBLIC_* at build time
 ARG NEXT_PUBLIC_API_URL=http://localhost:8000/api
@@ -18,13 +18,14 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-COPY --from=builder /app/public ./public
-
 # Next.js standalone output (includes server.js + minimal node_modules)
 COPY --from=builder /app/.next/standalone ./
 
 # Static assets (JS chunks, CSS, images — excluded from standalone)
 COPY --from=builder /app/.next/static ./.next/static
+
+# Public assets (favicon, robots.txt, etc.)
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 CMD ["node", "server.js"]
