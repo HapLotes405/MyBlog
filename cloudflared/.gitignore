@@ -1,0 +1,7 @@
+# Cloudflare Tunnel 配置目录
+
+# cloudflared 运行时文件（自动生成，不提交）
+*.json
+!*.example
+*.yml
+!*.example

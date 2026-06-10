@@ -1,11 +1,15 @@
 # ===== Production Docker Compose =====
-# 使用 GHCR 预构建镜像，无需本地构建
+# 使用 GHCR 预构建镜像 + Cloudflare Tunnel 绕过备案限制
+#
+# 架构：用户 → Cloudflare CDN (SSL) → Tunnel → nginx:80 → backend/frontend
+# nginx 不对外暴露端口，所有流量通过 Cloudflare Tunnel 进入
 #
 # 部署步骤：
-#   1. 将此文件 + .env + nginx/ 复制到服务器
-#   2. 生成 SSL 证书（Let's Encrypt 或自签名）
-#   3. docker compose -f docker-compose.prod.yml pull
-#   4. docker compose -f docker-compose.prod.yml up -d
+#   1. 将此文件 + .env + nginx/ + cloudflared/ 复制到服务器
+#   2. 配置 Cloudflare Tunnel（运行 scripts/cloudflare-tunnel-setup.sh）
+#   3. 将 CF_TUNNEL_TOKEN 写入 .env
+#   4. docker compose -f docker-compose.prod.yml pull
+#   5. docker compose -f docker-compose.prod.yml up -d
 #
 # 更新步骤：
 #   1. docker compose -f docker-compose.prod.yml pull
@@ -87,24 +91,47 @@ services:
         max-file: "3"
 
   # ============================================================
-  # Nginx 反向代理 —— 对外唯一入口
+  # Nginx 反向代理 —— 内部服务，不对外暴露端口
+  # Cloudflare Tunnel 负责将所有外部流量转发到 nginx:80
   # ============================================================
   nginx:
     image: nginx:1.27-alpine
     container_name: wiki-nginx
-    ports:
-      - "80:80"
-      - "443:443"
+    # 不对外暴露端口 —— Cloudflare Tunnel 通过 Docker 内部网络访问
+    # 如需本地调试可临时解注释：
+    # ports:
+    #   - "127.0.0.1:80:80"
+    expose:
+      - "80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
-      - ./nginx/www:/var/www/certbot
       - nginx_logs:/var/log/nginx
     depends_on:
       backend:
         condition: service_healthy
       frontend:
+        condition: service_started
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ============================================================
+  # Cloudflare Tunnel —— 唯一对外入口
+  # 通过出站连接到 Cloudflare 边缘节点，绕过阿里云端口封锁
+  # 流量路径：用户 → Cloudflare CDN → Tunnel → nginx:80
+  # ============================================================
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: wiki-tunnel
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN:?Cloudflare Tunnel token required}
+    depends_on:
+      nginx:
         condition: service_started
     restart: unless-stopped
     logging:

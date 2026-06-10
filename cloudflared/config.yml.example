@@ -1,0 +1,22 @@
+# Cloudflare Tunnel 配置模板
+# 使用 cloudflared tunnel create 命令创建 tunnel 后，
+# 将自动生成的 credentials.json 放到此目录，
+# 并修改此文件中的 tunnel ID 和 hostname。
+
+# 以下配置由 cloudflare-tunnel-setup.sh 自动生成，
+# 也可以手动编辑。
+
+tunnel: YOUR_TUNNEL_ID
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  # 主域名
+  - hostname: haplotest405.xyz
+    service: http://nginx:80
+
+  # 通配符子域名
+  - hostname: "*.haplotest405.xyz"
+    service: http://nginx:80
+
+  # 默认规则（必须，返回 404）
+  - service: http_status:404

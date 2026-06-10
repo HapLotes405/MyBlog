@@ -71,7 +71,7 @@ services:
         max-file: "3"
 
   # ============================================================
-  # Nginx 反向代理（开发环境 HTTP）
+  # Nginx 反向代理（开发环境 HTTP + 可选 Cloudflare Tunnel）
   # ============================================================
   nginx:
     image: nginx:1.27-alpine
@@ -81,7 +81,6 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./nginx/ssl:/etc/nginx/ssl:ro
       - nginx_logs:/var/log/nginx
     depends_on:
       backend:
@@ -94,6 +93,30 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  # ============================================================
+  # Cloudflare Tunnel（开发环境可选，需要 CF_TUNNEL_TOKEN）
+  # 如果不需要，此服务会因为没有 token 而无法启动
+  # ============================================================
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: wiki-tunnel
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN:-}
+    depends_on:
+      nginx:
+        condition: service_started
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    # 没有 token 时自动退出（不影响其他服务）
+    profiles:
+      - tunnel
+      - production
 
   # ============================================================
   # 自动备份服务（每日凌晨3点备份 PostgreSQL）

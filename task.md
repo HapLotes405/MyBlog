@@ -207,11 +207,14 @@
 - [x] Docker 容器 + 数据库已重建，使用全新密码
 - [x] frontend 子模块修复：移除嵌套 `.git`，直接归属主仓库
 
-### 5.6 服务器部署（下一步）
-- [ ] 阿里云 ACR 开通（容器镜像仓库）
-- [ ] 阿里云 ECS 购买/配置
-- [ ] CI/CD 对接 ACR + ECS 自动部署
-- [ ] 域名 + HTTPS 配置
+### 5.6 服务器部署 ✅ 2026-06-10
+- [x] ~~阿里云 ACR~~ → 改用 GHCR（免费，已配置），无需额外容器镜像仓库
+- [x] 阿里云 ECS 已就绪
+- [x] CI/CD 自动部署到 ECS（GitHub Actions → SSH → docker compose pull → up -d）
+- [x] Cloudflare Tunnel 域名方案（绕过阿里云备案限制，2026-06-10）
+- [ ] 域名 + Cloudflare SSL 配置（Tunnel 自动加密，CF Dashboard 设置 Full strict 模式）
+- [ ] 服务端初始化执行（首次部署时运行 `scripts/server-setup.sh`）
+- [ ] GitHub Secrets 配置（ECS_HOST / ECS_USER / ECS_SSH_KEY / GHCR_PAT / CF_TUNNEL_TOKEN）
 
 ---
 
@@ -254,7 +257,7 @@
 - **Phase 2**: ✅ 完成（2026-05-29）
 - **Phase 3**: ✅ 完成（2026-05-29）
 - **Phase 4**: ✅ 完成（2026-06-01）— Node.js + TypeScript 后端开发 + 前后端对接
-- **Phase 5**: ✅ 完成（2026-06-09）— Docker 容器化部署 + CI/CD 流水线 + 安全加固
+- **Phase 5**: ✅ 完成（2026-06-10）— Docker 容器化部署 + CI/CD 流水线 + 安全加固 + GitHub Actions → ECS 自动部署
 - **Phase 6**: ⏳ 待开始 — 进阶功能
 
 ---
@@ -283,12 +286,16 @@
 │   ├── Dockerfile               # 前端多阶段构建（Next.js standalone）
 │   └── .env.production          # NEXT_PUBLIC_API_URL
 ├── nginx/
-│   ├── nginx.conf                # 主配置（gzip、安全头、upstream）
+│   ├── nginx.conf                # 主配置（gzip、安全头、upstream、Cloudflare 真实 IP）
 │   ├── conf.d/
-│   │   ├── default.conf          # HTTP 站点（/api→backend, /→frontend）
-│   │   └── ssl.conf.example     # HTTPS 模板（TLS 1.2/1.3）
+│   │   ├── default.conf          # HTTP 站点（Cloudflare Tunnel → nginx:80）
+│   │   └── ssl.conf.example     # Cloudflare SSL 说明（Tunnel 自动处理 SSL）
 │   └── ssl/
-│       └── generate-certs.sh     # 自签名证书生成
+│       └── generate-certs.sh     # 自签名证书生成（本地测试用）
+├── cloudflared/
+│   ├── config.yml.example        # Cloudflare Tunnel 配置模板
+│   ├── credentials.json.example  # Tunnel 凭据文件说明
+│   └── .gitignore               # 排除实际凭据文件
 ├── backup/
 │   ├── backup.sh                 # 容器内备份
 │   ├── restore.sh                # 容器内恢复
@@ -333,12 +340,47 @@ Push/PR to master
   ghcr.io/haplotes405/myblog-frontend:latest
 ```
 
-### 下一步：阿里云部署
+### Cloudflare Tunnel 架构（绕过阿里云备案）
 
-1. 开通阿里云 ACR（容器镜像仓库）
-2. 开通/准备 ECS 服务器
-3. 在 GitHub Secrets 配置 ACR 凭据 + ECS SSH Key
-4. 更新 CI/CD 流水线：推送到 ACR + 自动部署到 ECS
+阿里云要求域名指向 ECS 必须完成 ICP 备案，否则封禁 80/443 入站流量。
+Cloudflare Tunnel 通过**从服务器主动发起出站连接**到 Cloudflare 边缘节点，完全绕过此限制。
+
+```
+用户浏览器 (HTTPS)
+    │
+    ▼
+Cloudflare CDN (SSL 终止)
+    │
+    ▼
+Cloudflare Tunnel (出站加密通道，服务器主动连接)
+    │
+    ▼
+nginx:80 (内部 Docker 网络)
+    │
+    ├── /api/*  → backend:8000
+    ├── /uploads/* → backend:8000
+    └── /*      → frontend:3000
+```
+
+**关键配置：**
+- nginx 不对外暴露端口（`expose: 80` 仅内部网络）
+- cloudflared 通过 `CF_TUNNEL_TOKEN` 认证
+- Cloudflare Dashboard SSL/TLS 设置为 **Full (strict)**
+- Cloudflare 侧开启 Always Use HTTPS + Automatic HTTPS Rewrites
+
+**部署步骤：**
+```bash
+# 1. 在 Cloudflare 添加域名，修改 NS 记录
+# 2. 运行 setup 脚本（交互式引导）
+ssh root@<ECS_IP> "bash -s" < scripts/cloudflare-tunnel-setup.sh
+
+# 3. 或手动配置：
+#    a. 创建 Tunnel: cloudflared tunnel create wiki-tunnel
+#    b. 获取 Token: cloudflared tunnel token wiki-tunnel
+#    c. 配置 DNS: CNAME → <tunnel-id>.cfargotunnel.com
+#    d. 将 Token 写入 .env: CF_TUNNEL_TOKEN=<token>
+#    e. 启动: docker compose -f docker-compose.prod.yml up -d
+```
 
 ---
 
@@ -419,7 +461,7 @@ Push/PR to master
 
 ---
 
-*最后更新: 2026-06-09 —— Phase 5 Docker 部署 + CI/CD ✅ 完成。安全加固 ✅。下一步：阿里云 ACR + ECS 部署*
+*最后更新: 2026-06-10 —— Phase 5 Docker 部署 + CI/CD ✅ 完成。安全加固 ✅。GitHub Actions → ECS 自动部署 ✅。下一步：域名 + HTTPS*
 
 ---
 
@@ -454,3 +496,50 @@ docker compose -f docker-compose.prod.yml pull
 docker compose -f docker-compose.prod.yml up -d
 docker compose exec backend node dist/db/seed.js
 ```
+
+### GitHub Actions → ECS 自动部署（2026-06-10 新增）
+
+**架构**：Push master → Verify → Build & Push to GHCR → SSH into ECS → `docker compose pull && up -d`
+
+**GitHub Secrets 配置**（Repo → Settings → Secrets and variables → Actions）：
+
+| Secret | 说明 |
+|--------|------|
+| `ECS_HOST` | ECS 服务器公网 IP |
+| `ECS_USER` | SSH 用户名（通常 `root`） |
+| `ECS_SSH_KEY` | SSH 私钥内容（`cat ~/.ssh/id_ed25519`） |
+| `CF_TUNNEL_TOKEN` | Cloudflare Tunnel Token（`cloudflared tunnel token <name>`） |
+| `GHCR_PAT` | GitHub PAT（`read:packages` scope，公开包可省略） |
+
+**首次部署步骤**：
+
+```bash
+# 1. 生成 SSH key（本地执行）
+ssh-keygen -t ed25519 -C "deploy@wiki" -f ~/.ssh/wiki_deploy
+
+# 2. 公钥复制到 ECS
+ssh-copy-id -i ~/.ssh/wiki_deploy.pub root@<ECS_IP>
+
+# 3. 在 ECS 上执行初始化脚本
+ssh root@<ECS_IP> "bash -s" < scripts/server-setup.sh
+
+# 4. 编辑 ECS 上的 .env（修改占位密码）
+ssh root@<ECS_IP> "vim /opt/wiki/.env"
+
+# 5. 配置 Cloudflare Tunnel（交互式引导）
+ssh root@<ECS_IP> "bash -s" < scripts/cloudflare-tunnel-setup.sh
+#    或者手动：cloudflared tunnel create → 获取 token → 写入 .env
+
+# 6. 启动服务 + 初始化博主账号
+ssh root@<ECS_IP> "cd /opt/wiki && docker compose -f docker-compose.prod.yml pull"
+ssh root@<ECS_IP> "cd /opt/wiki && docker compose -f docker-compose.prod.yml up -d"
+ssh root@<ECS_IP> "cd /opt/wiki && docker compose -f docker-compose.prod.yml exec backend node dist/db/seed.js"
+
+# 7. 在 GitHub Secrets 中添加 ECS_HOST / ECS_USER / ECS_SSH_KEY / CF_TUNNEL_TOKEN
+#    之后每次 push master 都会自动部署！
+```
+
+**新增文件**：
+- `scripts/server-setup.sh` — ECS 一键初始化（安装 Docker、下载配置、生成 .env）
+- `scripts/server-deploy.sh` — CI/CD 调用的远程部署脚本
+- `.github/workflows/ci.yml` — 新增 `deploy` job（Job 3）
