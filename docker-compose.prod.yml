@@ -127,9 +127,10 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: wiki-tunnel
-    command: tunnel run
+    command: tunnel --no-autoupdate run
     environment:
       - TUNNEL_TOKEN=${CF_TUNNEL_TOKEN:?Cloudflare Tunnel token required}
+      - TUNNEL_TRANSPORT_PROTOCOL=http2
     depends_on:
       nginx:
         condition: service_started
