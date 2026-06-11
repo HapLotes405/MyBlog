@@ -208,7 +208,7 @@ pre:has(> code > .md-codehead) > code {
   padding: 1rem 0.75rem;
   color: #ffffff;
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   line-height: 1.65;
   text-align: right;
   user-select: none;
@@ -224,7 +224,7 @@ pre:has(> code > .md-codehead) > code {
   padding: 1rem 1rem;
   overflow-x: auto;
   font-family: 'Courier New', Courier, monospace;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   line-height: 1.65;
   flex: 1;
   color: #c9d1d9;
