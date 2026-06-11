@@ -23,6 +23,7 @@ export const config = {
   jwtSecret: requireEnv('JWT_SECRET'),
   databaseUrl: requireEnv('DATABASE_URL'),
   uploadDir: process.env.UPLOAD_DIR || './uploads',
-  bloggerEmail: requireEnv('BLOGGER_EMAIL'),
+  bloggerUsername: process.env.BLOGGER_USERNAME || 'HapLotes405',
+  bloggerEmail: process.env.BLOGGER_EMAIL || 'admin@haplotes405.wiki',
   bloggerPassword: requireEnv('BLOGGER_PASSWORD'),
 };

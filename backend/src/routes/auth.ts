@@ -12,8 +12,8 @@ const router = Router();
 router.post('/register', async (req: Request, res: Response): Promise<void> => {
   const { username, email, password } = req.body;
 
-  if (!username || !email || !password) {
-    res.status(400).json({ success: false, message: '用户名、邮箱和密码不能为空' });
+  if (!username || !password) {
+    res.status(400).json({ success: false, message: '用户名和密码不能为空' });
     return;
   }
 
@@ -22,13 +22,13 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  const role = email === config.bloggerEmail ? 'blogger' : 'user';
+  const role = username === config.bloggerUsername ? 'blogger' : 'user';
 
   try {
     const passwordHash = bcrypt.hashSync(password, 10);
     const result = await execute(
       'INSERT INTO users (username, email, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id',
-      [username, email, passwordHash, role]
+      [username, email || null, passwordHash, role]
     );
     const userId = result.rows[0].id as number;
 
@@ -37,7 +37,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
 
     const tokenPayload: AuthPayload = {
       userId: Number(userRow.id),
-      email: userRow.email,
+      email: userRow.email || '',
       role: userRow.role,
     };
     const token = generateToken(tokenPayload);
@@ -46,7 +46,7 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
   } catch (err: unknown) {
     const pgErr = err as { code?: string; message?: string };
     if (pgErr.code === '23505') {
-      res.status(409).json({ success: false, message: '用户名或邮箱已存在' });
+      res.status(409).json({ success: false, message: '用户名已存在' });
       return;
     }
     console.error('[auth/register]', err);
@@ -54,32 +54,42 @@ router.post('/register', async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// POST /api/auth/login
+// POST /api/auth/login — supports username or email
 router.post('/login', async (req: Request, res: Response): Promise<void> => {
-  const { email, password } = req.body;
+  const { login, password } = req.body;
 
-  if (!email || !password) {
-    res.status(400).json({ success: false, message: '邮箱和密码不能为空' });
+  if (!login || !password) {
+    res.status(400).json({ success: false, message: '用户名和密码不能为空' });
     return;
   }
 
   try {
-    const userRow = await queryOne('SELECT * FROM users WHERE email = $1', [email]) as unknown as UserRow | undefined;
+    // Try username first, then email
+    let userRow = await queryOne(
+      'SELECT * FROM users WHERE username = $1', [login]
+    ) as unknown as UserRow | undefined;
+
     if (!userRow) {
-      res.status(401).json({ success: false, message: '邮箱或密码错误' });
+      userRow = await queryOne(
+        'SELECT * FROM users WHERE email = $1', [login]
+      ) as unknown as UserRow | undefined;
+    }
+
+    if (!userRow) {
+      res.status(401).json({ success: false, message: '用户名或密码错误' });
       return;
     }
 
     const valid = bcrypt.compareSync(password, userRow.password_hash);
     if (!valid) {
-      res.status(401).json({ success: false, message: '邮箱或密码错误' });
+      res.status(401).json({ success: false, message: '用户名或密码错误' });
       return;
     }
 
     const user = userRowToUser(userRow);
     const tokenPayload: AuthPayload = {
       userId: Number(userRow.id),
-      email: userRow.email,
+      email: userRow.email || '',
       role: userRow.role,
     };
     const token = generateToken(tokenPayload);

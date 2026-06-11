@@ -20,8 +20,7 @@ export default function RegisterPage() {
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!username.trim()) newErrors.username = '请输入用户名';
-    if (!email.trim()) newErrors.email = '请输入邮箱';
-    else if (!/\S+@\S+\.\S+/.test(email)) newErrors.email = '邮箱格式不正确';
+    if (email && !/\S+@\S+\.\S+/.test(email)) newErrors.email = '邮箱格式不正确';
     if (!password) newErrors.password = '请输入密码';
     else if (password.length < 6) newErrors.password = '密码至少 6 位';
     if (password !== confirmPassword) newErrors.confirmPassword = '两次密码不一致';
@@ -34,11 +33,11 @@ export default function RegisterPage() {
     if (!validate()) return;
     setLoading(true);
     setRegisterError('');
-    const success = await register(username, email, password);
+    const success = await register(username.trim(), email.trim() || '', password);
     if (success) {
       router.push('/');
     } else {
-      setRegisterError('注册失败，邮箱或用户名可能已被使用');
+      setRegisterError('注册失败，用户名可能已被使用');
     }
     setLoading(false);
   };
@@ -51,7 +50,7 @@ export default function RegisterPage() {
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.field}>
-            <label htmlFor="username">用户名</label>
+            <label htmlFor="username">用户名 *</label>
             <input
               id="username"
               type="text"
@@ -63,19 +62,19 @@ export default function RegisterPage() {
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="email">邮箱</label>
+            <label htmlFor="email">邮箱（可选）</label>
             <input
               id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
+              placeholder="your@email.com（选填）"
             />
             {errors.email && <span style={{ color: 'var(--color-error)', fontSize: 'var(--text-xs)' }}>{errors.email}</span>}
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="password">密码</label>
+            <label htmlFor="password">密码 *</label>
             <input
               id="password"
               type="password"
@@ -87,7 +86,7 @@ export default function RegisterPage() {
           </div>
 
           <div className={styles.field}>
-            <label htmlFor="confirmPassword">确认密码</label>
+            <label htmlFor="confirmPassword">确认密码 *</label>
             <input
               id="confirmPassword"
               type="password"

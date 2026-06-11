@@ -24,6 +24,13 @@ export async function runMigrations(): Promise<void> {
       END $$;
     `);
 
+    // Make email nullable (username is the primary identifier)
+    await client.query(`
+      ALTER TABLE users ALTER COLUMN email DROP NOT NULL;
+    `).catch(() => {
+      // Already nullable — ignore
+    });
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS blogs (
         id SERIAL PRIMARY KEY,

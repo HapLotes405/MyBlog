@@ -6,7 +6,7 @@ COPY package*.json ./
 RUN npm ci --no-optional && npm cache clean --force
 
 # Build-time env vars — Next.js inlines NEXT_PUBLIC_* at build time
-ARG NEXT_PUBLIC_API_URL=http://localhost:8000/api
+ARG NEXT_PUBLIC_API_URL=/api
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 COPY . .

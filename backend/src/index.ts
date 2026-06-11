@@ -26,7 +26,7 @@ async function main(): Promise<void> {
 
   // ===== Middleware =====
   app.use(cors({
-    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002'],
+    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000', 'http://localhost:3001'],
     credentials: true,
   }));
   app.use(express.json({ limit: '10mb' }));

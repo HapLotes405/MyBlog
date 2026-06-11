@@ -9,7 +9,7 @@ import {
   AuthResponse,
 } from '@/types';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 // ===== Token Management =====
 const TOKEN_KEY = 'auth_token';
@@ -62,16 +62,16 @@ function authHeaders(): HeadersInit {
 
 // ===== Auth API =====
 export const authApi = {
-  login: (data: LoginRequest): Promise<ApiResponse<AuthResponse>> =>
+  login: (login: string, password: string): Promise<ApiResponse<AuthResponse>> =>
     request<AuthResponse>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ login, password }),
     }),
 
-  register: (data: RegisterRequest): Promise<ApiResponse<AuthResponse>> =>
+  register: (username: string, email: string, password: string): Promise<ApiResponse<AuthResponse>> =>
     request<AuthResponse>('/auth/register', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ username, email, password }),
     }),
 
   me: (): Promise<ApiResponse<{ user: AuthResponse['user'] }>> =>

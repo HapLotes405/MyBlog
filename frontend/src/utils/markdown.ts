@@ -1,9 +1,10 @@
 import MarkdownIt from 'markdown-it';
 import hljs from 'highlight.js';
 
+// ---- MarkdownIt Instance ----
 const md = new MarkdownIt({
-  html: true,
-  linkify: true,
+  html: false,        // 禁用 raw HTML，防止 XSS 和渲染崩溃
+  linkify: false,     // 禁用自动链接（2.li 等会被误识别为域名）
   typographer: true,
   breaks: false,
   langPrefix: 'language-',
@@ -14,7 +15,9 @@ const md = new MarkdownIt({
     if (langName && hljs.getLanguage(langName)) {
       try {
         body = hljs.highlight(code, { language: langName, ignoreIllegals: true }).value;
-      } catch { body = md.utils.escapeHtml(code); }
+      } catch {
+        body = md.utils.escapeHtml(code);
+      }
     } else {
       body = md.utils.escapeHtml(code);
     }
@@ -33,7 +36,7 @@ const md = new MarkdownIt({
   },
 });
 
-// Images
+// ---- Image renderer (always escape) ----
 md.renderer.rules.image = (tokens, idx) => {
   const token = tokens[idx];
   const src = token.attrs?.[token.attrIndex('src')][1] || '';
@@ -41,7 +44,7 @@ md.renderer.rules.image = (tokens, idx) => {
   return `<img src="${md.utils.escapeHtml(src)}" alt="${md.utils.escapeHtml(alt)}" class="md-image" loading="lazy" />`;
 };
 
-// External links → new tab
+// ---- External links → new tab ----
 const defaultLinkOpen = md.renderer.rules.link_open!;
 md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
   const token = tokens[idx];
@@ -53,7 +56,7 @@ md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
   return defaultLinkOpen(tokens, idx, options, env, self);
 };
 
-// Admonition plugin
+// ---- Admonition plugin (!!! type "title") ----
 md.block.ruler.before('fence', 'admonition', (state, startLine, endLine, silent) => {
   const pos = state.bMarks[startLine] + state.tShift[startLine];
   const max = state.eMarks[startLine];
@@ -62,8 +65,8 @@ md.block.ruler.before('fence', 'admonition', (state, startLine, endLine, silent)
   if (!match) return false;
   if (silent) return true;
 
-  const admType = match[1].toLowerCase();
-  const admTitle = match[2] || admType;
+  const admType = md.utils.escapeHtml(match[1].toLowerCase());
+  const admTitle = md.utils.escapeHtml(match[2] || match[1]);
   let nextLine = startLine + 1;
   const bodyLines: string[] = [];
   while (nextLine < endLine) {
@@ -82,16 +85,27 @@ md.block.ruler.before('fence', 'admonition', (state, startLine, endLine, silent)
   const token = state.push('html_block', '', 0);
   token.content = `
     <div class="md-admonition md-adm-${admType}">
-      <p class="md-admonition-title"><span class="md-admonition-icon">${icons[admType] || '📝'}</span>${md.utils.escapeHtml(admTitle)}</p>
+      <p class="md-admonition-title"><span class="md-admonition-icon">${icons[admType] || '📝'}</span>${admTitle}</p>
       <div class="md-admonition-body">${bodyHtml}</div>
     </div>`;
   state.line = nextLine;
   return true;
 });
 
+// ---- Safe renderer (catches markdown-it crashes) ----
 export function renderMarkdown(content: string): string {
   if (!content) return '';
-  return md.render(content);
+  try {
+    const html = md.render(content);
+    // Sanity check: if output is suspiciously empty but input wasn't, fallback
+    if (!html || html.length < 3 && content.length > 3) {
+      return `<pre>${md.utils.escapeHtml(content)}</pre>`;
+    }
+    return html;
+  } catch {
+    // Return escaped plain text on render failure
+    return `<pre>${md.utils.escapeHtml(content)}</pre>`;
+  }
 }
 
 export default md;

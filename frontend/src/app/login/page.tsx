@@ -7,17 +7,17 @@ import { useAuth } from '@/context/AuthContext';
 import styles from './page.module.css';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
+  const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loginError, setLoginError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login: doLogin } = useAuth();
   const router = useRouter();
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
-    if (!email.trim()) newErrors.email = '请输入邮箱';
+    if (!login.trim()) newErrors.login = '请输入用户名或邮箱';
     if (!password) newErrors.password = '请输入密码';
     else if (password.length < 6) newErrors.password = '密码至少 6 位';
     setErrors(newErrors);
@@ -29,11 +29,11 @@ export default function LoginPage() {
     if (!validate()) return;
     setLoading(true);
     setLoginError('');
-    const success = await login(email, password);
+    const success = await doLogin(login.trim(), password);
     if (success) {
       router.push('/');
     } else {
-      setLoginError('邮箱或密码错误，请重试');
+      setLoginError('用户名或密码错误，请重试');
     }
     setLoading(false);
   };
@@ -46,15 +46,15 @@ export default function LoginPage() {
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <div className={styles.field}>
-            <label htmlFor="email">邮箱</label>
+            <label htmlFor="login">用户名 / 邮箱</label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com"
+              id="login"
+              type="text"
+              value={login}
+              onChange={(e) => setLogin(e.target.value)}
+              placeholder="用户名或邮箱"
             />
-            {errors.email && <span style={{ color: 'var(--color-error)', fontSize: 'var(--text-xs)' }}>{errors.email}</span>}
+            {errors.login && <span style={{ color: 'var(--color-error)', fontSize: 'var(--text-xs)' }}>{errors.login}</span>}
           </div>
 
           <div className={styles.field}>

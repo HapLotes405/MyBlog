@@ -1,7 +1,7 @@
 export interface User {
   id: string;
   username: string;
-  email: string;
+  email?: string;
   nickname: string;
   avatar: string;
   bio: string;
@@ -90,13 +90,13 @@ export interface PaginatedResponse<T> extends ApiResponse<T[]> {
 }
 
 export interface LoginRequest {
-  email: string;
+  login: string;  // username or email
   password: string;
 }
 
 export interface RegisterRequest {
   username: string;
-  email: string;
+  email?: string;
   password: string;
 }
 

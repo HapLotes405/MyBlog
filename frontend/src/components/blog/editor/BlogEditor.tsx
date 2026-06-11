@@ -7,6 +7,7 @@ import { BlogPost } from '@/types';
 import { blogApi, uploadApi } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { renderMarkdown } from '@/utils/markdown';
+import SafeHTML from '@/components/common/SafeHTML';
 import styles from './BlogEditor.module.css';
 
 // ============================================================
@@ -195,7 +196,7 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
     try {
       const res = await uploadApi.uploadImage(file);
       if (res.success && res.data) {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
         const baseUrl = apiBase.replace(/\/api$/, '');
         const fileUrl = `${baseUrl}${res.data.url}`;
         const ta = textareaRef.current;
@@ -365,9 +366,9 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
               实时预览
               <span className={styles.paneHint}>{calculateReadingTime(content)} 分钟阅读</span>
             </div>
-            <div
+            <SafeHTML
+              html={previewHtml}
               className={`${styles.previewPane} md-preview-pane`}
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
             />
           </div>
         </div>

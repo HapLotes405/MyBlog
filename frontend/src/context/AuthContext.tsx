@@ -8,7 +8,7 @@ interface AuthState {
   user: User | null;
   isBlogger: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (login: string, password: string) => Promise<boolean>;
   register: (username: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (user: User) => void;
@@ -50,9 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
   }, []);
 
-  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+  const login = useCallback(async (loginStr: string, password: string): Promise<boolean> => {
     try {
-      const res = await authApi.login({ email, password });
+      const res = await authApi.login(loginStr, password);
       if (res.success && res.data.token) {
         setToken(res.data.token);
         setUser(res.data.user);
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(async (username: string, email: string, password: string): Promise<boolean> => {
     try {
-      const res = await authApi.register({ username, email, password });
+      const res = await authApi.register(username, email, password);
       if (res.success && res.data.token) {
         setToken(res.data.token);
         setUser(res.data.user);
