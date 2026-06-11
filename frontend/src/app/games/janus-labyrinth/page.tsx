@@ -130,12 +130,8 @@ export default function JanusLabyrinthPage() {
 
       switch (msg.type) {
         case 'GAME_READY':
-          // Send level load command
-          if (selectedLevel) {
-            iframeRef.current?.contentWindow?.postMessage(
-              { type: 'LOAD_LEVEL', level: selectedLevel }, '*'
-            );
-          }
+          // Game loaded and ready — no need to send LOAD_LEVEL back
+          // (game reads ?level=N from its own URL at startup)
           break;
 
         case 'GAME_STARTED':

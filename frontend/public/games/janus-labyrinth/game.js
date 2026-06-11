@@ -422,30 +422,27 @@ GameScene.prototype._startCountdown = function () {
         color: '#ffd700', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6,
     }).setOrigin(0.5).setDepth(200);
 
-    this.time.addEvent({
-        delay: 1000, repeat: 3, // fires at count=3,2,1,GO!
-        callback: function () {
-            count--;
-            if (count > 0) {
-                self.countdownText.setText(String(count));
-                // Scale-pulse animation
-                self.tweens.add({ targets: self.countdownText, scaleX: 1.3, scaleY: 1.3, duration: 150, yoyo: true });
-            } else if (count === 0) {
-                self.countdownText.setText('GO!');
-                self.countdownText.setColor('#00ff00');
-                self.tweens.add({ targets: self.countdownText, scaleX: 1.5, scaleY: 1.5, duration: 200, yoyo: true });
-            }
-            if (count < 0) {
-                if (self.countdownBg) { self.countdownBg.destroy(); self.countdownBg = null; }
-                if (self.countdownText) { self.countdownText.destroy(); self.countdownText = null; }
-                self.paused = false;
-                self.gameStarted = true;
-                self.startTime = Date.now();
-                self.countdownActive = false;
-                sendToParent('GAME_STARTED', { level: currentLevel });
-            }
-        },
-    });
+    function tick() {
+        count--;
+        if (count > 0) {
+            self.countdownText.setText(String(count));
+            setTimeout(tick, 1000);
+        } else if (count === 0) {
+            self.countdownText.setText('GO!');
+            self.countdownText.setColor('#00ff00');
+            setTimeout(tick, 700); // shorter "GO!" display
+        } else {
+            // count < 0: start game
+            if (self.countdownBg) { self.countdownBg.destroy(); self.countdownBg = null; }
+            if (self.countdownText) { self.countdownText.destroy(); self.countdownText = null; }
+            self.paused = false;
+            self.gameStarted = true;
+            self.startTime = Date.now();
+            self.countdownActive = false;
+            sendToParent('GAME_STARTED', { level: currentLevel });
+        }
+    }
+    setTimeout(tick, 1000);
 };
 
 GameScene.prototype._clear = function () {
