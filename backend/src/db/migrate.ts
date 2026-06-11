@@ -117,6 +117,20 @@ export async function runMigrations(): Promise<void> {
     await client.query(
       'INSERT INTO personal_info (id) VALUES (1) ON CONFLICT (id) DO NOTHING'
     );
+
+    // Game leaderboard scores
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS game_scores (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        level INTEGER NOT NULL CHECK(level >= 1 AND level <= 8),
+        time_ms INTEGER NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE(user_id, level)
+      )
+    `);
+    await client.query('CREATE INDEX IF NOT EXISTS idx_game_scores_level_time ON game_scores(level, time_ms ASC)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_game_scores_user ON game_scores(user_id)');
   });
 
   console.log('[DB] Migrations completed successfully.');

@@ -7,6 +7,8 @@ import {
   LoginRequest,
   RegisterRequest,
   AuthResponse,
+  GameScore,
+  LeaderboardEntry,
 } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
@@ -197,6 +199,21 @@ export const profileApi = {
       headers: authHeaders(),
       body: JSON.stringify(data),
     }),
+};
+
+// ===== Game API =====
+export const gameApi = {
+  /** Submit or update a score (auth required). Returns the saved score with isNewBest flag. */
+  submitScore: (level: number, timeMs: number): Promise<ApiResponse<GameScore>> =>
+    request<GameScore>('/game-scores', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ level, timeMs }),
+    }),
+
+  /** Get leaderboard for a specific level (public). */
+  getLeaderboard: (level: number, limit = 20): Promise<ApiResponse<LeaderboardEntry[]>> =>
+    request<LeaderboardEntry[]>(`/game-scores?level=${level}&limit=${limit}`),
 };
 
 // ===== Upload API =====

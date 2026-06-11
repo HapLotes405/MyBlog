@@ -104,3 +104,23 @@ export interface AuthResponse {
   token: string;
   user: User;
 }
+
+// ===== Game Leaderboard =====
+
+export interface GameScore {
+  id: string;
+  level: number;
+  timeMs: number;
+  createdAt: string;
+  isNewBest?: boolean;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  userId: string;
+  username: string;
+  nickname: string;
+  avatar: string;
+  timeMs: number;
+  createdAt: string;
+}
