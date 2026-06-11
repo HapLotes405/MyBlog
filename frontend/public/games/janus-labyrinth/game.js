@@ -39,7 +39,7 @@ class Game extends Phaser.Scene {
         this._M=Phaser.Physics.Matter.Matter;
         this.t=0;this.paused=false;this.won=false;this.stab=0;this.sp=false;this.pa=0;this.ca=0;this.onP=false;
         this.rs=new Rot();this.rs.mv=LV.rotSpd;this.rs.ma=LV.maxRot;
-        this.ball=null;this.plat=null;this.fixed=[];this.moving=[];this.tracks=[];
+        this.ball=null;this.plat=null;this.fixed=[];this.moving=[];this.tracks=[];this.winText=null;
         this.add.image(640,400,'bg').setDisplaySize(1280,800);
         this.bgfx=this.add.graphics();this.ggfx=this.add.graphics();
         this.sk=this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -58,7 +58,7 @@ class Game extends Phaser.Scene {
     _load(){
         this._clear();const M=this._M,w=this.matter.world.engine.world;
         this.t=0;this.paused=false;this.won=false;this.stab=0;this.onP=false;this.pa=0;this.ca=0;
-        this.rs.reset();this.rs.mv=LV.rotSpd;this.rs.ma=LV.maxRot;this.sp=false;
+        this.rs.reset();this.rs.mv=LV.rotSpd;this.rs.ma=LV.maxRot;this.sp=false;if(this.winText){this.winText.destroy();this.winText=null;}
 
         this.plat=M.Bodies.rectangle(LV.pX,LV.pY,LV.pW,LV.pH,{isStatic:true,label:'plat',friction:LV.platFric,restitution:0.02});
         M.Composite.add(w,this.plat);
@@ -144,7 +144,7 @@ class Game extends Phaser.Scene {
     _segs(ca,sa){const s=[];for(const d of this.fixed)s.push({x1:X+d.lx1*ca-d.ly1*sa,y1:Y+d.lx1*sa+d.ly1*ca,x2:X+d.lx2*ca-d.ly2*sa,y2:Y+d.lx2*sa+d.ly2*ca,tp:'f'});for(const d of this.moving){const ly=d.cy-Y,lx=d.lx,hw=d.hw;s.push({x1:X+(lx-hw)*ca-ly*sa,y1:Y+(lx-hw)*sa+ly*ca,x2:X+(lx+hw)*ca-ly*sa,y2:Y+(lx+hw)*sa+ly*ca,tp:'m',dir:d.dir});}return s;}
 
     _vic(dt){if(!this.ball)return;const bp=this.ball.position,bv=this.ball.velocity,sp=Math.sqrt(bv.x*bv.x+bv.y*bv.y),hw=LV.pW/2,hh=LV.pH/2,br=LV.bR,on=this.onP||(Math.abs(bp.x-LV.pX)<hw+br&&Math.abs(bp.y-LV.pY)<hh+br),rest=on&&(sp<8||bp.y>LV.pY+hh);if(rest){this.stab+=dt;if(this.stab>=0.3)this._win();}else if(!on)this.stab=0;}
-    _win(){if(this.won)return;this.won=true;}
+    _win(){if(this.won)return;this.won=true;this.winText=this.add.text(640,400,'You Win',{fontFamily:'"Noto Serif SC","Source Han Serif SC","思源宋体",serif',fontSize:'72px',color:'#ffd700',fontStyle:'bold',stroke:'#000000',strokeThickness:4}).setOrigin(0.5).setScrollFactor(0).setDepth(100);}
 
     _drwBaf(){const g=this.bgfx;g.clear();const ca=Math.cos(this.ca),sa=Math.sin(this.ca);for(const s of this._segs(ca,sa)){g.lineStyle(6,0xc8a000,1);g.beginPath();g.moveTo(s.x1,s.y1);g.lineTo(s.x2,s.y2);g.strokePath();g.lineStyle(4,0xffd700,1);g.beginPath();g.moveTo(s.x1,s.y1);g.lineTo(s.x2,s.y2);g.strokePath();g.lineStyle(1.5,0xfff08c,0.7);g.beginPath();g.moveTo(s.x1,s.y1);g.lineTo(s.x2,s.y2);g.strokePath();for(const e of[{x:s.x1,y:s.y1},{x:s.x2,y:s.y2}]){g.fillStyle(0xffd700,1);g.fillCircle(e.x,e.y,5);g.fillStyle(0xfff08c,1);g.fillCircle(e.x,e.y,3);}}}
     _drwBal(){const g=this.ggfx;g.clear();if(!this.ball)return;const x=this.ball.position.x,y=this.ball.position.y,r=LV.bR;g.fillStyle(0x64b4ff,1);g.fillCircle(x,y,r);g.lineStyle(2,0x96d2ff,1);g.strokeCircle(x,y,r);g.fillStyle(0xc8e1ff,0.6);g.fillCircle(x-r*.3,y-r*.3,r*.3);}

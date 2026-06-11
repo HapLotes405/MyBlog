@@ -20,8 +20,6 @@ export default function JanusLabyrinthPage() {
         <div className={styles.controls}>
           <span><kbd>Space</kbd> / <kbd>长按屏幕</kbd> 顺时针旋转</span>
           <span><kbd>R</kbd> 重置</span>
-          <span><kbd>P</kbd> 暂停</span>
-          <span><kbd>N</kbd> 下一关</span>
         </div>
       </div>
 

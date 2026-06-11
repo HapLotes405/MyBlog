@@ -22,6 +22,8 @@ export default function Header() {
     return pathname.startsWith(href);
   };
 
+  const displayName = user ? (user.nickname || user.username) : '登录';
+
   return (
     <header className={styles.header}>
       <div className={styles.headerInner}>
@@ -42,28 +44,32 @@ export default function Header() {
         </nav>
 
         <div className={styles.actions}>
-          {isBlogger ? (
-            <>
-              <Link href="/blog/new" className={styles.writeBtn}>
-                写文章
-              </Link>
-            </>
-          ) : null}
+          {isBlogger && (
+            <Link href="/blog/new" className={styles.writeBtn}>
+              写文章
+            </Link>
+          )}
           <Link href={user ? '/profile' : '/login'} className={styles.userArea}>
             <img
               className={styles.avatar}
               src={user?.avatar || '/default-avatar.svg'}
               alt="avatar"
             />
-            <span className={styles.userName}>{user ? (user.nickname || user.username) : '登录'}</span>
+            <span className={styles.userName}>{displayName}</span>
           </Link>
-          {isBlogger ? (
+          {user && (
             <button className={styles.loginBtn} onClick={logout}>
               退出
             </button>
-          ) : null}
+          )}
         </div>
 
+        {/* 移动端可见的退出按钮 */}
+        {user && (
+          <button className={styles.mobileLogoutBtn} onClick={logout} title="退出登录">
+            退出
+          </button>
+        )}
         <button
           className={styles.menuBtn}
           onClick={() => setMobileOpen(!mobileOpen)}

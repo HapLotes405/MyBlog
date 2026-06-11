@@ -7,6 +7,7 @@ import { blogApi, interactionApi } from '@/services/api';
 import { BlogPost } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { renderMarkdown } from '@/utils/markdown';
+import SafeHTML from '@/components/common/SafeHTML';
 import CommentSection from '@/components/blog/CommentSection';
 import styles from './page.module.css';
 
@@ -37,9 +38,7 @@ export default function BlogDetailPage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [liked, setLiked] = useState(false);
-  const [favorited, setFavorited] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
-  const [favCount, setFavCount] = useState(0);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Smart back: use browser history, fall back to /blog
@@ -62,7 +61,6 @@ export default function BlogDetailPage() {
           const p = res.data as BlogPost;
           setPost(p);
           setLikeCount(p.likes);
-          setFavCount(p.favorites);
           markViewed(slug);
         } else {
           setNotFound(true);
@@ -108,17 +106,6 @@ export default function BlogDetailPage() {
       if (res.success && res.data) {
         setLiked(res.data.liked);
         setLikeCount((c) => (res.data.liked ? c + 1 : c - 1));
-      }
-    } catch { /* ignore */ }
-  };
-
-  const handleFavorite = async () => {
-    if (!user) { alert('请先登录后再收藏'); return; }
-    try {
-      const res = await interactionApi.favorite(post.slug);
-      if (res.success && res.data) {
-        setFavorited(res.data.favorited);
-        setFavCount((c) => (res.data.favorited ? c + 1 : c - 1));
       }
     } catch { /* ignore */ }
   };
@@ -197,17 +184,11 @@ export default function BlogDetailPage() {
             </svg>
             赞 {likeCount}
           </button>
-          <button className={`${styles.interactBtn} ${favorited ? styles.interactBtnActive : ''}`} onClick={handleFavorite}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill={favorited ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-            </svg>
-            收藏 {favCount}
-          </button>
         </div>
 
-        <div
+        <SafeHTML
+          html={contentHtml}
           className={`${styles.content} md-content`}
-          dangerouslySetInnerHTML={{ __html: contentHtml }}
         />
       </article>
 
