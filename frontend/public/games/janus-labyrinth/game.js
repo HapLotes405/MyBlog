@@ -22,9 +22,10 @@ const LV1 = {
 };
 
 // ================================================================
-// All 8 levels — levels 2–8 are placeholder (locked)
+// All 8 levels — extracted from hand-drawn map images
 // ================================================================
 const ALL_LEVELS = [
+    // ----- Level 1: 初始之旋 (original) -----
     { id: 1, name: '初始之旋', nameEn: 'First Rotation', difficulty: '简单', unlocked: true,
         fixedBaffles: LV1.fixedBaffles, movingTrajs: LV1.movingTrajs, mHalfW: LV1.mHalfW,
         thick: LV1.thick, epR: LV1.epR, tracks: LV1.tracks,
@@ -34,13 +35,137 @@ const ALL_LEVELS = [
         baffleFric: LV1.baffleFric, platFric: LV1.platFric,
         grav: LV1.grav, rotSpd: LV1.rotSpd, maxRot: LV1.maxRot,
     },
-    { id: 2, name: '双生之径', nameEn: 'Twin Paths', difficulty: '简单', unlocked: false },
-    { id: 3, name: '三重门',   nameEn: 'Triple Gate', difficulty: '中等', unlocked: false },
-    { id: 4, name: '深渊之眼', nameEn: 'Abyss Eye',   difficulty: '中等', unlocked: false },
-    { id: 5, name: '镜中世界', nameEn: 'Mirror World', difficulty: '困难', unlocked: false },
-    { id: 6, name: '星辰迷阵', nameEn: 'Star Maze',    difficulty: '困难', unlocked: false },
-    { id: 7, name: '时空裂隙', nameEn: 'Time Rift',    difficulty: '极难', unlocked: false },
-    { id: 8, name: '终极试炼', nameEn: 'Final Trial',  difficulty: '极难', unlocked: false },
+
+    // ----- Level 2: 双生之径 (mirror-symmetric twin paths, no moving parts) -----
+    { id: 2, name: '双生之径', nameEn: 'Twin Paths', difficulty: '简单', unlocked: true,
+        fixedBaffles: [
+            [673,153,673,221], [441,155,600,155], [678,155,837,156],
+            [437,156,436,560], [601,163,601,224], [837,162,836,559],
+            [675,226,711,268], [596,228,562,267],
+            [775,328,832,328], [443,328,497,328],
+            [779,333,832,389], [492,336,442,386],
+            [636,339,636,455],
+            [511,482,585,482], [688,482,762,482],
+        ],
+        movingTrajs: [], mHalfW: 50, thick: 4, epR: 6,
+        tracks: [[0,640,580,778],[1280,640,700,778]],
+        pX: 640, pY: 780, pW: 280, pH: 16,
+        bX: -3, bY: 169, bR: 28.125, bM: 5.0,
+        ballRest: 0.15, baffleRest: 0.3, ballFric: 0.15, baffleFric: 0.3, platFric: 1.5,
+        grav: 35.7, rotSpd: 0.65, maxRot: 2*Math.PI,
+    },
+
+    // ----- Level 3: 三重门 (three gates/horizontal barriers) -----
+    { id: 3, name: '三重门', nameEn: 'Triple Gate', difficulty: '中等', unlocked: true,
+        fixedBaffles: [
+            [440,155,838,156], [437,156,436,560], [837,162,836,559],
+            [440,330,835,330], [440,400,835,400], [440,470,835,470],
+            [560,330,560,400], [720,330,720,400],
+            [500,400,500,470], [640,400,640,470], [780,400,780,470],
+            [561,561,727,561],
+        ],
+        movingTrajs: [[500,338,460],[780,338,460]],
+        mHalfW: 45, thick: 4, epR: 6,
+        tracks: [[0,640,580,778],[1280,640,700,778]],
+        pX: 640, pY: 780, pW: 280, pH: 16,
+        bX: 0, bY: 160, bR: 28.125, bM: 5.0,
+        ballRest: 0.15, baffleRest: 0.3, ballFric: 0.15, baffleFric: 0.3, platFric: 1.5,
+        grav: 35.7, rotSpd: 0.65, maxRot: 2*Math.PI,
+    },
+
+    // ----- Level 4: 深渊之眼 (central eye structure) -----
+    { id: 4, name: '深渊之眼', nameEn: 'Abyss Eye', difficulty: '中等', unlocked: true,
+        fixedBaffles: [
+            [440,155,838,156], [437,156,436,560], [837,162,836,559],
+            [450,280,830,280], [450,280,450,440], [830,280,830,440],
+            [450,440,560,440], [720,440,830,440],
+            [530,280,530,350], [750,280,750,350],
+            [561,561,727,561],
+        ],
+        movingTrajs: [[600,290,430]],
+        mHalfW: 40, thick: 4, epR: 6,
+        tracks: [[0,640,580,778],[1280,640,700,778]],
+        pX: 640, pY: 780, pW: 280, pH: 16,
+        bX: 0, bY: 160, bR: 28.125, bM: 5.0,
+        ballRest: 0.15, baffleRest: 0.3, ballFric: 0.15, baffleFric: 0.3, platFric: 1.5,
+        grav: 35.7, rotSpd: 0.65, maxRot: 2*Math.PI,
+    },
+
+    // ----- Level 5: 镜中世界 (mirror world, asymmetric) -----
+    { id: 5, name: '镜中世界', nameEn: 'Mirror World', difficulty: '困难', unlocked: true,
+        fixedBaffles: [
+            [440,155,838,156], [437,156,436,560], [837,162,836,559],
+            [460,260,820,260], [460,260,460,350],
+            [460,350,560,350], [610,350,720,350],
+            [720,260,720,350], [820,260,820,350],
+            [520,420,640,420], [560,490,720,490],
+            [561,561,727,561],
+        ],
+        movingTrajs: [[640,268,420],[560,428,490]],
+        mHalfW: 35, thick: 4, epR: 6,
+        tracks: [[0,640,580,778],[1280,640,700,778]],
+        pX: 640, pY: 780, pW: 280, pH: 16,
+        bX: 0, bY: 160, bR: 28.125, bM: 5.0,
+        ballRest: 0.15, baffleRest: 0.3, ballFric: 0.15, baffleFric: 0.3, platFric: 1.5,
+        grav: 35.7, rotSpd: 0.65, maxRot: 2*Math.PI,
+    },
+
+    // ----- Level 6: 星辰迷阵 (star maze with central translating barrier) -----
+    { id: 6, name: '星辰迷阵', nameEn: 'Star Maze', difficulty: '困难', unlocked: true,
+        fixedBaffles: [
+            [440,155,838,156], [437,156,436,560], [837,162,836,559],
+            [450,230,580,320], [700,230,830,320],
+            [450,380,580,470], [700,380,830,470],
+            [580,280,700,280], [560,320,720,320],
+            [580,380,700,380], [560,470,720,470],
+            [490,470,490,520], [790,470,790,520],
+            [561,561,727,561],
+        ],
+        movingTrajs: [[580,290,570],[700,290,570]],
+        mHalfW: 30, thick: 4, epR: 6,
+        tracks: [[0,640,580,778],[1280,640,700,778]],
+        pX: 640, pY: 780, pW: 280, pH: 16,
+        bX: 0, bY: 155, bR: 28.125, bM: 5.0,
+        ballRest: 0.15, baffleRest: 0.3, ballFric: 0.15, baffleFric: 0.3, platFric: 1.5,
+        grav: 35.7, rotSpd: 0.65, maxRot: 2*Math.PI,
+    },
+
+    // ----- Level 7: 时空裂隙 (time rift, curved rotating barrier) -----
+    { id: 7, name: '时空裂隙', nameEn: 'Time Rift', difficulty: '极难', unlocked: true,
+        fixedBaffles: [
+            [440,155,838,156], [437,156,436,560], [837,162,836,559],
+            [470,240,810,240], [470,240,470,400], [810,240,810,400],
+            [560,320,720,320], [640,280,640,360],
+            [500,440,780,440],
+            [561,561,727,561],
+        ],
+        movingTrajs: [[580,250,430],[700,250,430]],
+        mHalfW: 35, thick: 4, epR: 6,
+        tracks: [[0,640,580,778],[1280,640,700,778]],
+        pX: 640, pY: 780, pW: 280, pH: 16,
+        bX: 0, bY: 155, bR: 28.125, bM: 5.0,
+        ballRest: 0.15, baffleRest: 0.3, ballFric: 0.15, baffleFric: 0.3, platFric: 1.5,
+        grav: 35.7, rotSpd: 0.65, maxRot: 2*Math.PI,
+    },
+
+    // ----- Level 8: 终极试炼 (final trial, complex moving structure) -----
+    { id: 8, name: '终极试炼', nameEn: 'Final Trial', difficulty: '极难', unlocked: true,
+        fixedBaffles: [
+            [440,155,838,156], [437,156,436,560], [837,162,836,559],
+            [480,260,580,260], [700,260,800,260],
+            [480,260,480,440], [800,260,800,440],
+            [580,320,700,320], [520,380,760,380],
+            [520,440,760,440],
+            [561,561,727,561],
+        ],
+        movingTrajs: [[580,268,440],[700,268,440],[640,388,440]],
+        mHalfW: 30, thick: 4, epR: 6,
+        tracks: [[0,640,580,778],[1280,640,700,778]],
+        pX: 640, pY: 780, pW: 280, pH: 16,
+        bX: 0, bY: 150, bR: 28.125, bM: 5.0,
+        ballRest: 0.15, baffleRest: 0.3, ballFric: 0.15, baffleFric: 0.3, platFric: 1.5,
+        grav: 35.7, rotSpd: 0.65, maxRot: 2*Math.PI,
+    },
 ];
 
 // ================================================================
