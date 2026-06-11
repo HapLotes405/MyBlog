@@ -73,7 +73,6 @@ export default function BlogDetailPage() {
           const p = res.data as BlogPost;
           setPost(p);
           setLikeCount(p.likes);
-          setFavCount(p.favorites);
         } else {
           setNotFound(true);
         }
