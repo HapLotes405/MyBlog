@@ -110,8 +110,8 @@ jobs:
           host: ${{ secrets.ECS_HOST }}
           username: ${{ secrets.ECS_USER }}
           key: ${{ secrets.ECS_SSH_KEY }}
-          script_stop: true
           script: |
+            set -e
             echo "=== Wiki Deploy — $(date '+%Y-%m-%d %H:%M:%S') ==="
 
             # Login to GHCR (optional — skip if GHCR_PAT not set)
