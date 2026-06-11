@@ -200,7 +200,10 @@ window.addEventListener('message', function (event) {
     var msg = event.data;
     if (!msg || !msg.type) return;
     if (msg.type === 'LOAD_LEVEL' && typeof msg.level === 'number') {
-        currentLevel = Math.min(Math.max(msg.level, 1), 8);
+        var newLevel = Math.min(Math.max(msg.level, 1), 8);
+        // Skip if already on this level (prevents infinite restart loop)
+        if (newLevel === currentLevel) return;
+        currentLevel = newLevel;
         var ld = getLevelById(currentLevel);
         if (ld && ld.unlocked) currentLv = ld;
         // Restart scene to apply new level
