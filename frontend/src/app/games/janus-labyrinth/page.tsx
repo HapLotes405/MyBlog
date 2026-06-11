@@ -289,7 +289,7 @@ export default function JanusLabyrinthPage() {
         <iframe
           ref={iframeRef}
           className={styles.gameIframe}
-          src={`/games/janus-labyrinth/index.html?level=${selectedLevel}`}
+          src={`/games/janus-labyrinth/level${selectedLevel}.html`}
           title="Janus Labyrinth Game"
           allow="accelerometer; autoplay"
           sandbox="allow-scripts allow-same-origin"
