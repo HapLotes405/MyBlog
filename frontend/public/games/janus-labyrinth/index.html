@@ -7,9 +7,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
+            width: 100%; height: 100%; overflow: hidden;
             background: #0a0f19;
             font-family: Arial, "Microsoft YaHei", "PingFang SC", sans-serif;
             touch-action: none;
@@ -18,41 +16,61 @@
             user-select: none;
         }
         #game-container {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            width: 100%; height: 100%;
+            display: flex; align-items: center; justify-content: center;
         }
         #game-container canvas {
-            display: block;
-            max-width: 100%;
-            max-height: 100%;
+            display: block; max-width: 100%; max-height: 100%;
         }
-        /* Mobile control hint */
         .mobile-hint {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
+            position: fixed; bottom: 20px; left: 50%;
             transform: translateX(-50%);
-            color: rgba(255,255,255,0.5);
-            font-size: 12px;
-            pointer-events: none;
-            z-index: 100;
-            text-align: center;
+            color: rgba(255,255,255,0.5); font-size: 12px;
+            pointer-events: none; z-index: 100; text-align: center;
         }
-        @media (min-width: 1024px) {
-            .mobile-hint { display: none; }
+        @media (min-width: 1024px) { .mobile-hint { display: none; } }
+        #error-msg {
+            display: none; position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ff4444; font-size: 18px; text-align: center;
+            z-index: 200;
         }
     </style>
 </head>
 <body>
     <div id="game-container"></div>
     <div class="mobile-hint">👆 按住屏幕旋转迷宫，松手恢复</div>
+    <div id="error-msg"></div>
 
     <!-- Phaser 3.60 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
-    <!-- Game script -->
-    <script src="game.js"></script>
+
+    <!-- Bootstrap: load level data, then game engine -->
+    <script>
+    (function () {
+        var params = new URLSearchParams(window.location.search);
+        var level = Math.min(Math.max(parseInt(params.get('level')) || 1, 1), 8);
+
+        fetch('levels/level' + level + '.json')
+            .then(function (r) {
+                if (!r.ok) throw new Error('HTTP ' + r.status);
+                return r.json();
+            })
+            .then(function (data) {
+                window.__LEVEL_DATA = data;
+                window.__LEVEL_NUMBER = level;
+                // Load game.js (which reads __LEVEL_DATA / __LEVEL_NUMBER)
+                var s = document.createElement('script');
+                s.src = 'game.js';
+                document.body.appendChild(s);
+            })
+            .catch(function (err) {
+                var el = document.getElementById('error-msg');
+                el.style.display = 'block';
+                el.textContent = '关卡 ' + level + ' 加载失败，请刷新重试';
+                console.error('Level load error:', err);
+            });
+    })();
+    </script>
 </body>
 </html>
