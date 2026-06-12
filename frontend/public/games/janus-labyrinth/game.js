@@ -258,7 +258,7 @@ Rot.prototype._up = function (dt) {
 // ================================================================
 // Phaser Scenes
 // ================================================================
-function Boot() { }
+function Boot() { Phaser.Scene.call(this, { key: 'Boot' }); }
 Boot.prototype = Object.create(Phaser.Scene.prototype);
 Boot.prototype.constructor = Boot;
 Boot.prototype.preload = function () {
@@ -274,7 +274,7 @@ Boot.prototype.create = function () { this.scene.start('Game'); };
 // ================================================================
 // Main Game Scene
 // ================================================================
-function GameScene() { }
+function GameScene() { Phaser.Scene.call(this, { key: 'Game' }); }
 GameScene.prototype = Object.create(Phaser.Scene.prototype);
 GameScene.prototype.constructor = GameScene;
 

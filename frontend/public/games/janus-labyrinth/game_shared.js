@@ -55,7 +55,7 @@ function startGame(levelConfig) {
     // ================================================================
     // Phaser Scenes
     // ================================================================
-    function Boot() { }
+    function Boot() { Phaser.Scene.call(this, { key: 'Boot' }); }
     Boot.prototype = Object.create(Phaser.Scene.prototype);
     Boot.prototype.constructor = Boot;
     Boot.prototype.preload = function () {
@@ -71,7 +71,7 @@ function startGame(levelConfig) {
     // ================================================================
     // Game Scene
     // ================================================================
-    function GameScene() { }
+    function GameScene() { Phaser.Scene.call(this, { key: 'Game' }); }
     GameScene.prototype = Object.create(Phaser.Scene.prototype);
     GameScene.prototype.constructor = GameScene;
 
