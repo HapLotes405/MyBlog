@@ -148,6 +148,11 @@ jobs:
               echo "[!] Cloudflare Tunnel may not be running — check logs"
             fi
 
+            # ---- ONE-OFF: Delete level 2 leaderboard data ----
+            echo "[*] Deleting leaderboard data for level 2..."
+            docker compose -f docker-compose.prod.yml exec -T db psql -U postgres -d wiki -c "DELETE FROM game_scores WHERE level = 2;"
+            echo "[✓] Level 2 leaderboard cleared"
+
             # Status
             echo ""
             docker compose -f docker-compose.prod.yml ps
