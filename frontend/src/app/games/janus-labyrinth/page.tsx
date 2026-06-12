@@ -24,9 +24,6 @@ const LEVELS: LevelInfo[] = [
   { id: 3, name: '三重门', nameEn: 'Triple Gate', difficulty: '中等', unlocked: true },
   { id: 4, name: '深渊之眼', nameEn: 'Abyss Eye', difficulty: '中等', unlocked: true },
   { id: 5, name: '镜中世界', nameEn: 'Mirror World', difficulty: '困难', unlocked: true },
-  { id: 6, name: '星辰迷阵', nameEn: 'Star Maze', difficulty: '困难', unlocked: true },
-  { id: 7, name: '时空裂隙', nameEn: 'Time Rift', difficulty: '极难', unlocked: true },
-  { id: 8, name: '终极试炼', nameEn: 'Final Trial', difficulty: '极难', unlocked: true },
 ];
 
 const DIFFICULTY_COLORS: Record<string, string> = {

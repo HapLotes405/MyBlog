@@ -49,7 +49,7 @@
     <script>
     (function () {
         var params = new URLSearchParams(window.location.search);
-        var level = Math.min(Math.max(parseInt(params.get('level')) || 1, 1), 8);
+        var level = Math.min(Math.max(parseInt(params.get('level')) || 1, 1), 5);
 
         fetch('levels/level' + level + '.json')
             .then(function (r) {

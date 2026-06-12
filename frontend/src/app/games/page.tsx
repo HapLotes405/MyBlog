@@ -6,7 +6,7 @@ const GAMES = [
     id: 'janus-labyrinth',
     title: '雅努斯迷津',
     subtitle: 'Janus Labyrinth',
-    description: '基于物理的2D益智游戏，旋转迷宫引导石球穿越障碍抵达终点。7个难度递增的关卡等你挑战。',
+    description: '通过旋转迷宫，引导石球穿越障碍抵达终点。',
     icon: '🏛️',
     difficulty: '中等',
     tag: '物理益智',

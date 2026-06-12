@@ -41,7 +41,7 @@ window.addEventListener('message', function (event) {
     var msg = event.data;
     if (!msg || !msg.type) return;
     if (msg.type === 'LOAD_LEVEL' && typeof msg.level === 'number') {
-        var newLevel = Math.min(Math.max(msg.level, 1), 8);
+        var newLevel = Math.min(Math.max(msg.level, 1), 5);
         if (newLevel === currentLevel) return;
         currentLevel = newLevel;
         // Fetch level JSON, then apply to running game
@@ -67,7 +67,7 @@ window.addEventListener('message', function (event) {
 // ================================================================
 function Rot() {
     this.a = 0; this.v = 0; this.mv = 0.65; this.ma = 2 * Math.PI;
-    this.at = 0.25; this.st = "idle"; this.tm = 0; this.nx = "accel_ccw";
+    this.at = 0.167; this.st = "idle"; this.tm = 0; this.nx = "accel_ccw";
 }
 Rot.prototype.reset = function () { this.a = 0; this.v = 0; this.st = "idle"; this.tm = 0; };
 Rot.prototype.press = function () {
@@ -129,7 +129,8 @@ GameScene.prototype.create = function () {
     // Physics engine config (one-time)
     var eng = this.matter.world.engine;
     eng.positionIterations = 60; eng.velocityIterations = 60;
-    this.matter.world.setGravity(0, 10);
+    this.matter.world.engine.gravity.y = 15;
+    this.matter.world.engine.gravity.x = 0;
     this.matter.world.autoUpdate = false;
     this.matter.world.on('collisionstart', function (ev) {
         for (var i = 0; i < ev.pairs.length; i++) {
@@ -233,7 +234,7 @@ GameScene.prototype._createBodies = function (ld) {
 
     // Ball
     this.ball = M.Bodies.circle(X + ld.bX, Y + ld.bY, ld.bR, {
-        label: 'ball', restitution: 0.02, friction: 0.5,
+        label: 'ball', restitution: 0.02, friction: 0.8,
         density: ld.bM / (Math.PI * ld.bR * ld.bR)
     });
     M.Composite.add(w, this.ball);
@@ -247,7 +248,7 @@ GameScene.prototype._createBodies = function (ld) {
         var mx = (lx1 + lx2) / 2, my = (ly1 + ly2) / 2;
         var dx = lx2 - lx1, dy = ly2 - ly1, len = Math.sqrt(dx * dx + dy * dy), la = Math.atan2(dy, dx);
         var body = M.Bodies.rectangle(X + mx, Y + my, len, ld.thick || 4,
-            { isStatic: true, angle: la, label: 'baffle', friction: 0.3, restitution: 0.3 });
+            { isStatic: true, angle: la, label: 'baffle', friction: 0.6, restitution: 0.3 });
         M.Composite.add(w, body);
         this.fixed.push({ body: body, lx1: lx1, ly1: ly1, lx2: lx2, ly2: ly2, mx: mx, my: my, la: la, len: len });
     }
@@ -350,10 +351,12 @@ GameScene.prototype.update = function (time, delta) {
     if (pz) this._collide(ca);
     if (this.ball) {
         var v = this.ball.velocity;
-        var vx = v.x, vy = v.y, c = false;
-        if (Math.abs(vx) > 10) { vx = Math.sign(vx) * 10; c = true; }
-        if (Math.abs(vy) > 10) { vy = Math.sign(vy) * 10; c = true; }
-        if (c) this._M.Body.setVelocity(this.ball, { x: vx, y: vy });
+        var vx = v.x, vy = v.y;
+        var spd = Math.sqrt(vx * vx + vy * vy);
+        if (spd > 8) {
+            var scale = 8 / spd;
+            this._M.Body.setVelocity(this.ball, { x: vx * scale, y: vy * scale });
+        }
     }
     if (!this.won && !this.paused) this._vic(dt);
     this._drwBaf(); this._drwBal();
@@ -394,10 +397,10 @@ GameScene.prototype._pose = function (a) {
 GameScene.prototype._collide = function (a) {
     if (!this.ball) return;
     var B = this._M.Body, br = currentLv.bR, er = currentLv.epR || 6;
-    var bt = currentLv.thick || 4, minDist = br + er, pushMargin = Math.max(bt, 3);
-    var velEps = 3, ca = Math.cos(a), sa = Math.sin(a), sg = this._segs(ca, sa);
+    var bt = currentLv.thick || 4, minDist = br + er, pushMargin = Math.max(bt, 4);
+    var velEps = 2, ca = Math.cos(a), sa = Math.sin(a), sg = this._segs(ca, sa);
     var bpx = this.ball.position.x, bpy = this.ball.position.y;
-    for (var it = 0; it < 5; it++) {
+    for (var it = 0; it < 10; it++) {
         var resolved = false;
         for (var si = 0; si < sg.length; si++) {
             var s = sg[si];
@@ -415,8 +418,13 @@ GameScene.prototype._collide = function (a) {
                 var bv = this.ball.velocity;
                 if (bv) {
                     var vi = bv.x * nx + bv.y * ny;
-                    if (vi < -velEps) B.setVelocity(this.ball, { x: bv.x - nx * vi, y: bv.y - ny * vi });
-                    else if (vi < 0) B.setVelocity(this.ball, { x: bv.x - nx * vi, y: bv.y - ny * vi });
+                    if (vi < -velEps) {
+                        // Deep penetration: fully cancel inward velocity
+                        B.setVelocity(this.ball, { x: bv.x - nx * vi, y: bv.y - ny * vi });
+                    } else if (vi < 0) {
+                        // Light contact: dampen only 60% for corner sliding
+                        B.setVelocity(this.ball, { x: bv.x - nx * vi * 0.6, y: bv.y - ny * vi * 0.6 });
+                    }
                 }
                 resolved = true;
             }
@@ -430,8 +438,11 @@ GameScene.prototype._collide = function (a) {
                     var bv = this.ball.velocity;
                     if (bv) {
                         var vi = bv.x * nx + bv.y * ny;
-                        if (vi < -velEps) B.setVelocity(this.ball, { x: bv.x - nx * vi, y: bv.y - ny * vi });
-                        else if (vi < 0) B.setVelocity(this.ball, { x: bv.x - nx * vi, y: bv.y - ny * vi });
+                        if (vi < -velEps) {
+                            B.setVelocity(this.ball, { x: bv.x - nx * vi, y: bv.y - ny * vi });
+                        } else if (vi < 0) {
+                            B.setVelocity(this.ball, { x: bv.x - nx * vi * 0.6, y: bv.y - ny * vi * 0.6 });
+                        }
                     }
                     resolved = true;
                 }
@@ -530,6 +541,6 @@ window._gameInstance = new Phaser.Game({
     type: Phaser.AUTO, width: 1280, height: 800,
     backgroundColor: '#0a0f19', parent: 'game-container',
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-    physics: { default: 'matter', matter: { gravity: { x: 0, y: 0 }, debug: false } },
+    physics: { default: 'matter', matter: { gravity: { x: 0, y: 15 }, debug: false } },
     scene: [Boot, GameScene],
 });
