@@ -165,7 +165,7 @@ GameScene.prototype.create = function () {
     this.countdownActive = false;
     this.rs = new Rot();
     this.ball = null; this.plat = null; this.fixed = []; this.moving = []; this.tracks = [];
-    this.winText = null; this.timerText = null;
+    this.winText = null; this.winTimeText = null; this.timerText = null;
     this.countdownText = null; this.countdownBg = null;
 
     // Load initial map
@@ -196,6 +196,7 @@ GameScene.prototype._loadMap = function (ld, lv) {
 
     // Clean up UI texts
     if (this.winText) { this.winText.destroy(); this.winText = null; }
+    if (this.winTimeText) { this.winTimeText.destroy(); this.winTimeText = null; }
     if (this.timerText) { this.timerText.destroy(); this.timerText = null; }
     if (this.countdownText) { this.countdownText.destroy(); this.countdownText = null; }
     if (this.countdownBg) { this.countdownBg.destroy(); this.countdownBg = null; }
@@ -317,7 +318,7 @@ GameScene.prototype._startCountdown = function () {
 // ---- update(): main loop ----
 GameScene.prototype.update = function (time, delta) {
     var dt = delta / 1000;
-    this._inp(); this.rs.update(dt);
+    if (!this.paused) { this._inp(); this.rs.update(dt); }
     if (!this.paused && !this.won) this.t += dt;
 
     // Timer display
@@ -333,13 +334,15 @@ GameScene.prototype.update = function (time, delta) {
     }
 
     var ca = this.rs.a, pa = this.pa; this.pa = ca; this.ca = ca;
-    // Moving baffles
-    for (var i = 0; i < this.moving.length; i++) {
-        var d = this.moving[i];
-        var ny = d.cy + 90 * dt * d.dir;
-        if (ny > d.wy2) { ny = d.wy2; d.dir = -1; }
-        else if (ny < d.wy1) { ny = d.wy1; d.dir = 1; }
-        d.cy = ny;
+    // Moving baffles (only when not paused)
+    if (!this.paused) {
+        for (var i = 0; i < this.moving.length; i++) {
+            var d = this.moving[i];
+            var ny = d.cy + 90 * dt * d.dir;
+            if (ny > d.wy2) { ny = d.wy2; d.dir = -1; }
+            else if (ny < d.wy1) { ny = d.wy1; d.dir = 1; }
+            d.cy = ny;
+        }
     }
     var sdt = delta / 48, da = ca - pa, pz = !this.won && !this.paused;
     if (pz) this._collide(pa);
@@ -498,7 +501,7 @@ GameScene.prototype._win = function () {
     var sec = totalSec % 60;
     var tenth = Math.floor((elapsed % 1000) / 100);
     var timeStr = (min < 10 ? '0' : '') + min + ':' + (sec < 10 ? '0' : '') + sec + '.' + tenth;
-    this.add.text(640, 470, '用时 ' + timeStr, {
+    this.winTimeText = this.add.text(640, 470, '用时 ' + timeStr, {
         fontFamily: '"Noto Serif SC",serif', fontSize: '32px',
         color: '#64b4ff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(100);

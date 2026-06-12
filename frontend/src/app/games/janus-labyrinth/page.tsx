@@ -62,6 +62,7 @@ export default function JanusLabyrinthPage() {
 
   // State
   const [selectedLevel, setSelectedLevel] = useState<number | null>(null);
+  const [gameReady, setGameReady] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [displayTimeMs, setDisplayTimeMs] = useState(0);
   const [finalTimeMs, setFinalTimeMs] = useState<number | null>(null);
@@ -79,7 +80,9 @@ export default function JanusLabyrinthPage() {
     const level = LEVELS.find(l => l.id === levelId);
     if (!level || !level.unlocked) return;
     setSelectedLevel(levelId);
+    setGameReady(false);
     setGameStarted(false);
+    stopTimer();
     setDisplayTimeMs(0);
     setFinalTimeMs(null);
     setScoreSubmitted(false);
@@ -88,6 +91,7 @@ export default function JanusLabyrinthPage() {
 
   const handleBackToLevels = () => {
     setSelectedLevel(null);
+    setGameReady(false);
     setGameStarted(false);
     stopTimer();
     setDisplayTimeMs(0);
@@ -100,6 +104,9 @@ export default function JanusLabyrinthPage() {
   // Timer
   // ================================================================
   const startTimer = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
     const startTick = Date.now();
     timerRef.current = setInterval(() => {
       setDisplayTimeMs(Date.now() - startTick);
@@ -127,8 +134,7 @@ export default function JanusLabyrinthPage() {
 
       switch (msg.type) {
         case 'GAME_READY':
-          // Game loaded and ready — no need to send LOAD_LEVEL back
-          // (game reads ?level=N from its own URL at startup)
+          setGameReady(true);
           break;
 
         case 'GAME_STARTED':
@@ -149,10 +155,10 @@ export default function JanusLabyrinthPage() {
 
         case 'GAME_RESET':
           setGameStarted(false);
+          stopTimer();
           setDisplayTimeMs(0);
           setFinalTimeMs(null);
           setScoreSubmitted(false);
-          startTimer();
           break;
       }
     };
@@ -274,7 +280,7 @@ export default function JanusLabyrinthPage() {
 
       {/* Game iframe */}
       <div className={styles.gameWrapper}>
-        {!gameStarted && finalTimeMs === null && (
+        {!gameReady && finalTimeMs === null && (
           <div className={styles.gameOverlay}>
             <span className={styles.overlayHint}>
               {selectedLevel && LEVELS.find(l => l.id === selectedLevel)?.unlocked
