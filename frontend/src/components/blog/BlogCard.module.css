@@ -11,6 +11,9 @@
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
   background: var(--color-surface);
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
 .cardLink:hover .card {
@@ -23,6 +26,9 @@
 
 .cardBody {
   padding: var(--space-6);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .tags {
@@ -67,6 +73,7 @@
   gap: var(--space-4);
   font-size: var(--text-xs);
   color: var(--color-text-tertiary);
+  margin-top: auto;
 }
 
 .metaItem {
