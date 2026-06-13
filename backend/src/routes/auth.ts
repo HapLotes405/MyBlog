@@ -117,4 +117,44 @@ router.get('/me', authMiddleware, async (req: Request, res: Response): Promise<v
   }
 });
 
+// POST /api/auth/change-password
+router.post('/change-password', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+  const { currentPassword, newPassword } = req.body;
+
+  if (!currentPassword || !newPassword) {
+    res.status(400).json({ success: false, message: '当前密码和新密码不能为空' });
+    return;
+  }
+
+  if (newPassword.length < 6) {
+    res.status(400).json({ success: false, message: '新密码长度不能少于6位' });
+    return;
+  }
+
+  try {
+    const userRow = await queryOne(
+      'SELECT * FROM users WHERE id = $1', [req.user!.userId]
+    ) as unknown as UserRow | undefined;
+
+    if (!userRow) {
+      res.status(404).json({ success: false, message: '用户不存在' });
+      return;
+    }
+
+    const valid = bcrypt.compareSync(currentPassword, userRow.password_hash);
+    if (!valid) {
+      res.status(401).json({ success: false, message: '当前密码错误' });
+      return;
+    }
+
+    const newHash = bcrypt.hashSync(newPassword, 10);
+    await execute('UPDATE users SET password_hash = $1 WHERE id = $2', [newHash, req.user!.userId]);
+
+    res.json({ success: true, message: '密码修改成功' });
+  } catch (err) {
+    console.error('[auth/change-password]', err);
+    res.status(500).json({ success: false, message: '服务器内部错误' });
+  }
+});
+
 export default router;

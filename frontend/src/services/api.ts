@@ -80,6 +80,13 @@ export const authApi = {
     request<{ user: AuthResponse['user'] }>('/auth/me', {
       headers: authHeaders(),
     }),
+
+  changePassword: (currentPassword: string, newPassword: string): Promise<ApiResponse<{ message: string }>> =>
+    request<{ message: string }>('/auth/change-password', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({ currentPassword, newPassword }),
+    }),
 };
 
 // ===== Blog API =====

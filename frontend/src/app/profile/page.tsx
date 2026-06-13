@@ -3,7 +3,7 @@
 import { useState, useRef, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { userApi } from '@/services/api';
+import { userApi, authApi } from '@/services/api';
 import styles from './page.module.css';
 
 export default function ProfilePage() {
@@ -17,6 +17,14 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+
+  // Password change state
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState('');
+  const [passwordErr, setPasswordErr] = useState('');
 
   if (!user) {
     return (
@@ -86,6 +94,41 @@ export default function ProfilePage() {
     }
   };
 
+  const handleChangePassword = async (e: FormEvent) => {
+    e.preventDefault();
+    setPasswordErr('');
+    setPasswordMsg('');
+
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordErr('请填写所有密码字段');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setPasswordErr('新密码长度不能少于6位');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordErr('两次输入的新密码不一致');
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const res = await authApi.changePassword(currentPassword, newPassword);
+      if (res.success) {
+        setPasswordMsg('密码修改成功');
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => setPasswordMsg(''), 5000);
+      }
+    } catch (err: any) {
+      setPasswordErr(err.message || '密码修改失败，请重试');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   return (
     <div className={styles.page}>
       <div className={styles.card}>
@@ -150,6 +193,59 @@ export default function ProfilePage() {
             {saving ? '保存中...' : '保存修改'}
           </button>
         </form>
+
+        {/* Password Change Section */}
+        <div className={styles.passwordSection}>
+          <h2 className={styles.passwordTitle}>修改密码</h2>
+          <form onSubmit={handleChangePassword}>
+            <div className={styles.field}>
+              <label htmlFor="currentPassword" className={styles.label}>当前密码</label>
+              <input
+                id="currentPassword"
+                type="password"
+                className={styles.input}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="输入当前密码"
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="newPassword" className={styles.label}>新密码</label>
+              <input
+                id="newPassword"
+                type="password"
+                className={styles.input}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="输入新密码（至少6位）"
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label htmlFor="confirmPassword" className={styles.label}>确认新密码</label>
+              <input
+                id="confirmPassword"
+                type="password"
+                className={styles.input}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="再次输入新密码"
+              />
+            </div>
+
+            {passwordErr && <p className={styles.error}>{passwordErr}</p>}
+            {passwordMsg && <p className={styles.success}>{passwordMsg}</p>}
+
+            <button
+              type="submit"
+              className={styles.btn}
+              disabled={changingPassword}
+            >
+              {changingPassword ? '修改中...' : '修改密码'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
