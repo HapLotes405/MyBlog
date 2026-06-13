@@ -197,7 +197,7 @@ export default function ProfilePage() {
         {/* Password Change Section */}
         <div className={styles.passwordSection}>
           <h2 className={styles.passwordTitle}>修改密码</h2>
-          <form onSubmit={handleChangePassword}>
+          <form className={styles.form} onSubmit={handleChangePassword}>
             <div className={styles.field}>
               <label htmlFor="currentPassword" className={styles.label}>当前密码</label>
               <input
