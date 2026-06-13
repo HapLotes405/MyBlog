@@ -15,6 +15,7 @@ import profileRoutes from './routes/profile';
 import uploadRoutes from './routes/upload';
 import userRoutes from './routes/user';
 import gameScoreRoutes from './routes/game-scores';
+import aiRoutes from './routes/ai';
 
 async function main(): Promise<void> {
   // ===== Initialize database =====
@@ -45,6 +46,7 @@ async function main(): Promise<void> {
   app.use('/api/upload', uploadRoutes);
   app.use('/api/user', userRoutes);
   app.use('/api/game-scores', gameScoreRoutes);
+  app.use('/', aiRoutes);
 
   // ===== Health check =====
   app.get('/api/health', (_req, res) => {

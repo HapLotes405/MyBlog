@@ -8,6 +8,7 @@ import { blogApi, uploadApi } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { renderMarkdown } from '@/utils/markdown';
 import SafeHTML from '@/components/common/SafeHTML';
+import AIAssistant from './AIAssistant';
 import styles from './BlogEditor.module.css';
 
 // ============================================================
@@ -69,6 +70,23 @@ function surroundSelection(
   });
 }
 
+// Safely replace all occurrences of a substring in a string (escapes regex chars)
+function replaceAll(str: string, find: string, replacement: string): string {
+  const escaped = find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return str.replace(new RegExp(escaped, 'g'), replacement);
+}
+
+// Extract all image URLs from markdown content: ![alt](url)
+function extractImageUrls(content: string): Array<{ fullMatch: string; alt: string; url: string }> {
+  const regex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  const results: Array<{ fullMatch: string; alt: string; url: string }> = [];
+  let match;
+  while ((match = regex.exec(content)) !== null) {
+    results.push({ fullMatch: match[0], alt: match[1], url: match[2] });
+  }
+  return results;
+}
+
 // ============================================================
 //  BlogEditor Component
 // ============================================================
@@ -93,6 +111,13 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [showAI, setShowAI] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
+
+  // Track background uploads: blobUrl → { file, promise }
+  // Blob URLs are replaced silently with server URLs as uploads complete
+  const pendingUploads = useRef<Map<string, { file: File; promise: Promise<void> }>>(new Map());
 
   useEffect(() => {
     if (post) {
@@ -104,13 +129,108 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
     }
   }, [post]);
 
+  // Cleanup blob URLs on unmount
+  useEffect(() => {
+    const uploads = pendingUploads.current;
+    return () => {
+      uploads.forEach((_, blobUrl) => URL.revokeObjectURL(blobUrl));
+      uploads.clear();
+    };
+  }, []);
+
   const insertFormat = useCallback((before: string, after: string, placeholder: string) => {
     const ta = textareaRef.current;
     if (!ta) return;
     surroundSelection(ta, setContent, before, after, placeholder);
   }, []);
 
-  // ===== Save =====
+  // Helper: insert a local image (File) into the editor as blob URL for instant preview,
+  // then silently upload in background and replace blob URL with server URL
+  const insertLocalImage = useCallback((file: File) => {
+    const blobUrl = URL.createObjectURL(file);
+    const ta = textareaRef.current;
+    const alt = file.name || `image-${Date.now()}`;
+    const mdImage = `![${alt}](${blobUrl})`;
+
+    // 1. Insert blob URL immediately for instant preview
+    if (ta) {
+      surroundSelection(ta, setContent, '', mdImage, '');
+    } else {
+      setContent((prev) => prev + '\n' + mdImage + '\n');
+    }
+
+    // 2. Background upload — silently replace blob URL when done
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
+    const baseUrl = apiBase.replace(/\/api$/, '');
+
+    const promise = uploadApi.uploadImage(file)
+      .then((res) => {
+        if (res.success && res.data) {
+          const serverUrl = `${baseUrl}${res.data.url}`;
+          // Silently replace blob URL with server URL in content
+          setContent((prev) => replaceAll(prev, blobUrl, serverUrl));
+          URL.revokeObjectURL(blobUrl);
+          pendingUploads.current.delete(blobUrl);
+        }
+      })
+      .catch(() => {
+        // Upload failed — blob URL stays, will be retried on save
+      });
+
+    pendingUploads.current.set(blobUrl, { file, promise });
+  }, []);
+
+  // ===== Paste handler: detect clipboard images =====
+  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        e.preventDefault();
+        const file = items[i].getAsFile();
+        if (file) {
+          insertLocalImage(file);
+        }
+        return;
+      }
+    }
+  }, [insertLocalImage]);
+
+  // ===== Drag-and-drop handlers =====
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer?.types?.includes('Files')) {
+      setIsDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Only set false if leaving the drop zone itself
+    if (e.currentTarget === e.target || !e.currentTarget.contains(e.relatedTarget as Node)) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    for (let i = 0; i < files.length; i++) {
+      if (files[i].type.startsWith('image/')) {
+        insertLocalImage(files[i]);
+      }
+    }
+  }, [insertLocalImage]);
+
+  // ===== Save (with image processing) =====
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
       setMessage('标题和内容不能为空');
@@ -119,21 +239,96 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
     setSaving(true);
     setMessage('');
 
-    const slug = isNew ? generateSlugFromTitle(title) : post!.slug;
-    const tags = tagsStr.split(/[,，]/).map((t) => t.trim()).filter(Boolean);
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
+    const baseUrl = apiBase.replace(/\/api$/, '');
 
     try {
+      // --- Step 1: Wait for all in-flight background uploads ---
+      const pending = [...pendingUploads.current.values()].map((v) => v.promise);
+      if (pending.length > 0) {
+        setMessage('正在完成图片上传...');
+        await Promise.allSettled(pending);
+      }
+
+      // --- Step 2: Read latest content (background uploads may have replaced blob URLs) ---
+      let processedContent = textareaRef.current?.value || content;
+
+      // --- Step 3: Handle remaining blob URLs (failed background uploads → retry) ---
+      const imageUrls = extractImageUrls(processedContent);
+      const blobEntries = imageUrls.filter((img) => img.url.startsWith('blob:'));
+      const externalEntries = imageUrls.filter(
+        (img) => img.url.startsWith('http://') || img.url.startsWith('https://')
+      );
+
+      let totalToProcess = blobEntries.length + externalEntries.filter(
+        (img) => !(img.url.startsWith('/uploads/') || (baseUrl && img.url.startsWith(baseUrl)))
+      ).length;
+
+      if (totalToProcess > 0) {
+        let processed = 0;
+        setMessage(`正在处理图片 (0/${totalToProcess})...`);
+
+        // Retry failed blob uploads
+        for (const img of blobEntries) {
+          const entry = pendingUploads.current.get(img.url);
+          if (entry) {
+            try {
+              const res = await uploadApi.uploadImage(entry.file);
+              if (res.success && res.data) {
+                const serverUrl = `${baseUrl}${res.data.url}`;
+                processedContent = replaceAll(processedContent, img.url, serverUrl);
+                URL.revokeObjectURL(img.url);
+                pendingUploads.current.delete(img.url);
+              }
+            } catch {
+              console.warn(`Failed to upload image: ${img.alt}`);
+              setMessage(`图片 "${img.alt}" 上传失败，保留原始引用`);
+            }
+          }
+          processed++;
+          if (totalToProcess > 1) setMessage(`正在处理图片 (${processed}/${totalToProcess})...`);
+        }
+
+        // Download external URLs to server
+        for (const img of externalEntries) {
+          const isLocalUrl = img.url.startsWith('/uploads/') || (baseUrl && img.url.startsWith(baseUrl));
+          if (isLocalUrl) continue;
+
+          try {
+            const res = await uploadApi.downloadImage(img.url);
+            if (res.success && res.data) {
+              const serverUrl = `${baseUrl}${res.data.url}`;
+              processedContent = replaceAll(processedContent, img.url, serverUrl);
+            }
+          } catch {
+            console.warn(`Failed to download image: ${img.url}`);
+            if (!message.includes('下载失败')) {
+              setMessage(`图片 "${img.alt}" 下载失败，保留原始 URL`);
+            }
+          }
+          processed++;
+          if (totalToProcess > 1) setMessage(`正在处理图片 (${processed}/${totalToProcess})...`);
+        }
+      }
+
+      // --- Step 4: Save post ---
+      const slug = isNew ? generateSlugFromTitle(title) : post!.slug;
+      const tags = tagsStr.split(/[,，]/).map((t) => t.trim()).filter(Boolean);
+
       if (isNew) {
         const res = await blogApi.create({
           title: title.trim(),
           summary: summary.trim(),
-          content,
+          content: processedContent,
           slug,
           tags: tags as unknown as string[],
           coverImage,
         } as Partial<BlogPost>);
         if (res.success && res.data) {
           const newPost = res.data as BlogPost;
+          // Clean up any remaining blob URLs
+          pendingUploads.current.forEach((_, blobUrl) => URL.revokeObjectURL(blobUrl));
+          pendingUploads.current.clear();
           setMessage('文章已发布！');
           setTimeout(() => router.push(`/blog/${newPost.slug}`), 800);
         }
@@ -141,11 +336,13 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
         await blogApi.update(post!.id, {
           title: title.trim(),
           summary: summary.trim(),
-          content,
+          content: processedContent,
           tags: tags as unknown as string[],
           slug: generateSlugFromTitle(title),
           coverImage,
         } as Partial<BlogPost>);
+        pendingUploads.current.forEach((_, blobUrl) => URL.revokeObjectURL(blobUrl));
+        pendingUploads.current.clear();
         setMessage('文章已更新！');
         setSaving(false);
       }
@@ -300,7 +497,12 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
       )}
 
       {/* Form */}
-      <div className={styles.form}>
+      <div
+        className={`${styles.form} ${isDragOver ? styles.dragOver : ''}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
         <div className={styles.field}>
           <input className={styles.titleInput} type="text" value={title}
             onChange={(e) => setTitle(e.target.value)} placeholder="文章标题" />
@@ -343,10 +545,41 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
           <button className={styles.tbBtn} title="提示框" onClick={() => insertFormat('\n!!! tip "提示"\n    ', '\n', '内容')}>💡</button>
           <button className={styles.tbBtn} title="注意框" onClick={() => insertFormat('\n!!! note "注意"\n    ', '\n', '内容')}>📝</button>
           <button className={styles.tbBtn} title="警告框" onClick={() => insertFormat('\n!!! warning "警告"\n    ', '\n', '内容')}>⚠️</button>
+          <span className={styles.tbSep} />
+          <button
+            className={`${styles.tbBtn} ${showAI ? styles.tbBtnActive : ''}`}
+            title="AI 写作助手"
+            onClick={() => setShowAI((v) => !v)}
+          >
+            🤖 AI
+          </button>
         </div>
+
+        {/* AI Assistant */}
+        {showAI && (
+          <AIAssistant
+            content={content}
+            selectedText={selectedText}
+            title={title}
+            onInsert={(text) => {
+              const ta = textareaRef.current;
+              if (ta) {
+                surroundSelection(ta, setContent, '', text, '');
+              } else {
+                setContent((prev) => prev + '\n' + text + '\n');
+              }
+            }}
+          />
+        )}
 
         {/* Editor + Preview */}
         <div className={styles.editorArea}>
+          {isDragOver && (
+            <div className={styles.dropOverlay}>
+              <span>📁 释放以插入图片</span>
+            </div>
+          )}
+
           <div className={styles.editorPane}>
             <div className={styles.paneHeader}>
               <span>Markdown 编辑</span>
@@ -358,6 +591,11 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
               value={content}
               onChange={(e) => setContent(e.target.value)}
               onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              onSelect={(e) => {
+                const ta = e.currentTarget;
+                setSelectedText(ta.value.slice(ta.selectionStart, ta.selectionEnd));
+              }}
               placeholder={`在这里写 Markdown 正文...\n\n## 使用工具栏快速插入格式\n\n\`\`\`typescript\nconst greeting = "Hello World";\n\`\`\`\n\n> 引用文字\n\n- 列表项\n\n![图片](https://example.com/image.png)\n\n**粗体** *斜体* \`code\``}
             />
           </div>

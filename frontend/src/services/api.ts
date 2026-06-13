@@ -233,4 +233,56 @@ export const uploadApi = {
     }
     return data;
   },
+
+  downloadImage: async (imageUrl: string): Promise<ApiResponse<{ url: string; filename: string; size: number; type: 'image' }>> => {
+    const url = `${API_BASE}/upload/download-url`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders(),
+      },
+      body: JSON.stringify({ url: imageUrl }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Download failed');
+    }
+    return data;
+  },
+};
+
+// ===== AI API =====
+export interface AIMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface AIChatResponse {
+  content: string;
+  usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
+  model?: string;
+}
+
+export const aiApi = {
+  chat: async (messages: AIMessage[], options?: { temperature?: number; maxTokens?: number }): Promise<ApiResponse<AIChatResponse>> => {
+    const url = `${API_BASE}/ai/chat`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders(),
+      },
+      body: JSON.stringify({
+        messages,
+        temperature: options?.temperature,
+        maxTokens: options?.maxTokens,
+      }),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'AI request failed');
+    }
+    return data;
+  },
 };
