@@ -1,5 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware, bloggerOnly } from '../middleware/auth';
+import fs from 'fs';
+import path from 'path';
 
 const router = Router();
 
@@ -7,7 +9,17 @@ const router = Router();
 // DeepSeek API configuration
 // ============================================================
 
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || '';
+function getApiKey(): string {
+  // 1. Environment variable
+  if (process.env.DEEPSEEK_API_KEY) return process.env.DEEPSEEK_API_KEY;
+  // 2. Fallback file (docker cp friendly)
+  const keyFile = process.env.DEEPSEEK_KEY_FILE || path.join(__dirname, '../../deepseek.key');
+  if (fs.existsSync(keyFile)) {
+    return fs.readFileSync(keyFile, 'utf-8').trim();
+  }
+  return '';
+}
+
 const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com/v1';
 const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
 
@@ -23,8 +35,9 @@ interface ChatRequest {
 
 router.post('/api/ai/chat', authMiddleware, bloggerOnly, async (req: Request, res: Response): Promise<void> => {
   try {
-    if (!DEEPSEEK_API_KEY) {
-      res.status(500).json({ success: false, message: 'DeepSeek API 未配置（缺少 DEEPSEEK_API_KEY 环境变量）' });
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      res.status(500).json({ success: false, message: 'DeepSeek API 未配置（缺少 DEEPSEEK_API_KEY 环境变量或 deepseek.key 文件）' });
       return;
     }
 
@@ -39,7 +52,7 @@ router.post('/api/ai/chat', authMiddleware, bloggerOnly, async (req: Request, re
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: DEEPSEEK_MODEL,
