@@ -239,7 +239,7 @@ server.tool(
     const content = await deepseekChat([
       {
         role: "system",
-        content: `你是一个专业的技术博客作者。写作风格：${styleHints[style]}。用 Markdown 格式输出，包含适当数量的二级标题、代码块（标注语言）、列表和引用。直接输出文章内容，不要加前言后语。`,
+        content: `你是一个专业的技术博客作者。写作风格：${styleHints[style]}。用 Markdown 格式输出，包含适当数量的二级标题、代码块（标注语言）、列表和引用。直接输出文章内容，不要加前言后语。**重要：禁止使用 LaTeX 数学公式（$...$ 或 $$...$$），请使用 Unicode 符号或纯文本替代。例如用 "⊆" 代替 "\\subseteq"，用 "*P*" 代替 "$P$"，用 "C(n,k)" 代替 "\\binom{n}{k}"。**`,
       },
       { role: "user", content: `写一篇关于「${topic}」的博客文章。${extra}` },
     ]);

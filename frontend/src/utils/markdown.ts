@@ -12,7 +12,8 @@ const md = new MarkdownIt({
   highlight: (code: string, lang: string): string => {
     const langName = lang || '';
     let body: string;
-    if (langName && hljs.getLanguage(langName)) {
+    // hljs may be undefined in some browser bundle contexts
+    if (langName && typeof hljs !== 'undefined' && hljs && hljs.getLanguage(langName)) {
       try {
         body = hljs.highlight(code, { language: langName, ignoreIllegals: true }).value;
       } catch {
@@ -45,7 +46,7 @@ md.renderer.rules.image = (tokens, idx) => {
 };
 
 // ---- External links → new tab ----
-const defaultLinkOpen = md.renderer.rules.link_open!;
+const defaultLinkOpen = md.renderer.rules.link_open || ((tokens: any, idx: any, options: any, env: any, self: any) => self.renderToken(tokens, idx, options));
 md.renderer.rules.link_open = (tokens, idx, options, env, self) => {
   const token = tokens[idx];
   const href = token.attrs?.[token.attrIndex('href')][1] || '';
@@ -98,13 +99,15 @@ export function renderMarkdown(content: string): string {
   try {
     const html = md.render(content);
     // Sanity check: if output is suspiciously empty but input wasn't, fallback
-    if (!html || html.length < 3 && content.length > 3) {
-      return `<pre>${md.utils.escapeHtml(content)}</pre>`;
+    if (!html || (html.length < 3 && content.length > 3)) {
+      const reason = !html ? `html is ${JSON.stringify(html)}` : `html.length=${html.length} < 3 && content.length=${content.length} > 3`;
+      return `<!-- renderMarkdown SANITY FAIL: ${md.utils.escapeHtml(reason)} --><pre>${md.utils.escapeHtml(content)}</pre>`;
     }
     return html;
-  } catch {
-    // Return escaped plain text on render failure
-    return `<pre>${md.utils.escapeHtml(content)}</pre>`;
+  } catch (err) {
+    // Return escaped plain text on render failure — embed diagnosis in HTML comment
+    const errMsg = err instanceof Error ? (err.message || err.constructor.name) : String(err);
+    return `<!-- renderMarkdown CRASH: ${md.utils.escapeHtml(errMsg)} --><pre>${md.utils.escapeHtml(content)}</pre>`;
   }
 }
 
