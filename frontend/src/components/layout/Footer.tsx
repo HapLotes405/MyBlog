@@ -24,7 +24,6 @@ export default function Footer() {
           <a href="https://github.com" target="_blank" rel="noopener noreferrer">
             GitHub
           </a>
-          <a href="/rss.xml">RSS</a>
         </div>
       </div>
       <div className={styles.bottom}>
@@ -34,9 +33,6 @@ export default function Footer() {
         <div className={styles.social}>
           <a href="https://github.com" target="_blank" rel="noopener noreferrer">
             GitHub
-          </a>
-          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">
-            Twitter
           </a>
         </div>
       </div>

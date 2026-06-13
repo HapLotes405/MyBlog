@@ -389,7 +389,7 @@ function LeaderboardPanel({
             <span className={styles.lbPlayer}>
               <span className={styles.lbAvatar}>
                 {entry.avatar
-                  ? entry.avatar
+                  ? <img src={entry.avatar} alt={entry.nickname || entry.username} />
                   : (entry.nickname || entry.username).charAt(0).toUpperCase()}
               </span>
               {entry.nickname || entry.username}
