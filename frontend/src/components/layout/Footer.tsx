@@ -21,7 +21,7 @@ export default function Footer() {
         </div>
         <div className={styles.column}>
           <h4>链接</h4>
-          <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/HapLotes405" target="_blank" rel="noopener noreferrer">
             GitHub
           </a>
         </div>
@@ -31,7 +31,7 @@ export default function Footer() {
           &copy; {year} {"HapLotes405's Wiki"}. All rights reserved.
         </span>
         <div className={styles.social}>
-          <a href="https://github.com" target="_blank" rel="noopener noreferrer">
+          <a href="https://github.com/HapLotes405" target="_blank" rel="noopener noreferrer">
             GitHub
           </a>
         </div>

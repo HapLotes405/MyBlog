@@ -19,7 +19,7 @@ export const mockPersonalInfo: PersonalInfo = {
   bio: '热爱技术，喜欢探索前沿科技。从事 Web 开发 5 年，专注于 React、Node.js 和 Python 生态。工作之余喜欢骑行、摄影和阅读科幻小说。这个博客记录我的技术思考和生活点滴。',
   location: '中国 · 北京',
   socialLinks: [
-    { platform: 'GitHub', url: 'https://github.com', icon: 'github' },
+    { platform: 'GitHub', url: 'https://github.com/HapLotes405', icon: 'github' },
     { platform: 'Twitter', url: 'https://twitter.com', icon: 'twitter' },
     { platform: 'LinkedIn', url: 'https://linkedin.com', icon: 'linkedin' },
     { platform: '掘金', url: 'https://juejin.cn', icon: 'juejin' },
