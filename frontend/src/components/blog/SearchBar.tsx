@@ -8,6 +8,7 @@ import styles from './SearchBar.module.css';
 interface SearchBarProps {
   posts?: BlogPost[];
   placeholder?: string;
+  initialQuery?: string;
 }
 
 function highlightMatch(text: string, query: string): React.ReactNode {
@@ -21,9 +22,13 @@ function highlightMatch(text: string, query: string): React.ReactNode {
   );
 }
 
-export default function SearchBar({ posts = [], placeholder = '搜索文章...' }: SearchBarProps) {
-  const [query, setQuery] = useState('');
+export default function SearchBar({ posts = [], placeholder = '搜索文章...', initialQuery = '' }: SearchBarProps) {
+  const [query, setQuery] = useState(initialQuery);
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setQuery(initialQuery);
+  }, [initialQuery]);
   const [activeIndex, setActiveIndex] = useState(0);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -56,6 +61,13 @@ export default function SearchBar({ posts = [], placeholder = '搜索文章...' 
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  const handleSearch = () => {
+    if (query.trim()) {
+      router.push(`/blog?search=${encodeURIComponent(query.trim())}`);
+      setOpen(false);
+    }
+  };
+
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -65,14 +77,7 @@ export default function SearchBar({ posts = [], placeholder = '搜索文章...' 
       setActiveIndex((prev) => Math.max(prev - 1, 0));
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      if (results[activeIndex]) {
-        router.push(`/blog/${results[activeIndex].slug}`);
-        setOpen(false);
-        setQuery('');
-      } else if (query.trim()) {
-        router.push(`/blog?search=${encodeURIComponent(query.trim())}`);
-        setOpen(false);
-      }
+      handleSearch();
     } else if (e.key === 'Escape') {
       setOpen(false);
     }
@@ -95,7 +100,13 @@ export default function SearchBar({ posts = [], placeholder = '搜索文章...' 
           placeholder={placeholder}
           aria-label="搜索文章"
         />
-        <span className={styles.shortcut}>⌘K</span>
+        <button
+          className={styles.searchBtn}
+          onClick={handleSearch}
+          aria-label="搜索"
+        >
+          搜索
+        </button>
       </div>
 
       {open && query.trim() && (
@@ -107,12 +118,11 @@ export default function SearchBar({ posts = [], placeholder = '搜索文章...' 
                 <a
                   key={post.id}
                   className={styles.resultItem}
-                  href={`/blog/${post.slug}`}
+                  href={`/blog?search=${encodeURIComponent(query.trim())}`}
                   onClick={(e) => {
                     e.preventDefault();
-                    router.push(`/blog/${post.slug}`);
+                    router.push(`/blog?search=${encodeURIComponent(query.trim())}`);
                     setOpen(false);
-                    setQuery('');
                   }}
                   style={{ background: index === activeIndex ? 'var(--color-bg-secondary)' : undefined }}
                   onMouseEnter={() => setActiveIndex(index)}

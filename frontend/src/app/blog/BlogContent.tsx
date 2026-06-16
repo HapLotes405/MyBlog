@@ -17,6 +17,10 @@ export default function BlogContent() {
   const [query, setQuery] = useState(searchQuery);
 
   useEffect(() => {
+    setQuery(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
     // Fetch all posts (up to 100)
     blogApi.list(1, undefined, 100).then((res) => {
       if (res.success) setAllPosts(res.data as BlogPost[]);
@@ -59,7 +63,7 @@ export default function BlogContent() {
           技术分享与思考，涵盖前端开发、后端架构和工程实践。
         </p>
         <div className={styles.searchWrapper}>
-          <SearchBar posts={allPosts} placeholder="搜索文章..." />
+          <SearchBar posts={allPosts} placeholder="搜索文章..." initialQuery={searchQuery} />
         </div>
         <div className={styles.filterBar}>
           <button
