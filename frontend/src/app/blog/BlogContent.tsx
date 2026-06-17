@@ -60,7 +60,7 @@ export default function BlogContent() {
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>博客</h1>
         <p className={styles.pageDesc}>
-          技术分享与思考，涵盖前端开发、后端架构和工程实践。
+          笔记分享与思考
         </p>
         <div className={styles.searchWrapper}>
           <SearchBar posts={allPosts} placeholder="搜索文章..." initialQuery={searchQuery} />

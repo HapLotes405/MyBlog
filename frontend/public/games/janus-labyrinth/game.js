@@ -152,11 +152,14 @@ GameScene.prototype.create = function () {
     this.bgfx = this.add.graphics();
     this.ggfx = this.add.graphics();
 
-    // Input (one-time)
+    // Input (one-time) — track keyboard & pointer independently so both
+    // can trigger clockwise rotation, and only joint release resets.
     this.sk = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.rk = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
-    this.input.on('pointerdown', function (p) { if (p.y > 60) { this.sp = true; this.rs.press(); } }, this);
-    this.input.on('pointerup', function () { this.sp = false; this.rs.release(); }, this);
+    this.kbDown = false;
+    this.ptrDown = false;
+    this.input.on('pointerdown', function (p) { if (p.y > 60 && !this.ptrDown) { this.ptrDown = true; this.rs.press(); } }, this);
+    this.input.on('pointerup', function () { if (this.ptrDown) { this.ptrDown = false; if (!this.kbDown) this.rs.release(); } }, this);
 
     // Runtime state init
     this.t = 0; this.paused = false; this.won = false; this.stab = 0; this.sp = false;
@@ -188,7 +191,7 @@ GameScene.prototype._loadMap = function (ld, lv) {
     this.rs.reset();
     this.rs.mv = ld.rotSpd || 0.65;
     this.rs.ma = ld.maxRot || 2 * Math.PI;
-    this.sp = false;
+    this.kbDown = false; this.ptrDown = false;
 
     // Update global refs
     currentLv = ld;
@@ -368,8 +371,8 @@ GameScene.prototype.update = function (time, delta) {
 // ---- _inp(): keyboard + pointer input, R to restart ----
 GameScene.prototype._inp = function () {
     var k = this.sk.isDown;
-    if (k && !this.sp) { this.sp = true; this.rs.press(); }
-    else if (!k && this.sp) { this.sp = false; this.rs.release(); }
+    if (k && !this.kbDown) { this.kbDown = true; this.rs.press(); }
+    else if (!k && this.kbDown) { this.kbDown = false; if (!this.ptrDown) this.rs.release(); }
     if (Phaser.Input.Keyboard.JustDown(this.rk)) {
         // Restart same level: reload map + countdown (no fetch needed)
         var self = this;
