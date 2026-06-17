@@ -116,7 +116,9 @@ jobs:
             cd /opt/wiki
 
             # Ensure deepseek.key exists (for DeepSeek AI API)
+            # Docker creates a directory if the file doesn't exist — remove it first
             if [ -n "${{ secrets.DEEPSEEK_API_KEY }}" ]; then
+              rm -rf /opt/wiki/deepseek.key
               echo "${{ secrets.DEEPSEEK_API_KEY }}" > /opt/wiki/deepseek.key
               chmod 600 /opt/wiki/deepseek.key
               echo "[✓] deepseek.key written"
