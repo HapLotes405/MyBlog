@@ -113,6 +113,16 @@ jobs:
           script: |
             set -e
             echo "=== Wiki Deploy — $(date '+%Y-%m-%d %H:%M:%S') ==="
+            cd /opt/wiki
+
+            # Ensure deepseek.key exists (for DeepSeek AI API)
+            if [ -n "${{ secrets.DEEPSEEK_API_KEY }}" ]; then
+              echo "${{ secrets.DEEPSEEK_API_KEY }}" > /opt/wiki/deepseek.key
+              chmod 600 /opt/wiki/deepseek.key
+              echo "[✓] deepseek.key written"
+            else
+              echo "[!] DEEPSEEK_API_KEY secret not set — AI features will not work"
+            fi
 
             # Login to GHCR (optional — skip if GHCR_PAT not set)
             if [ -n "${{ secrets.GHCR_PAT }}" ]; then
@@ -123,11 +133,14 @@ jobs:
 
             # Pull latest images
             echo "[*] Pulling images..."
-            cd /opt/wiki
             docker compose -f docker-compose.prod.yml pull
 
-            # Restart services
-            echo "[*] Restarting services..."
+            # Recreate backend to pick up new deepseek.key mount
+            echo "[*] Recreating backend..."
+            docker compose -f docker-compose.prod.yml up -d --force-recreate backend
+
+            # Start remaining services
+            echo "[*] Starting services..."
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
             # Health check
