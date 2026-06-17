@@ -104,18 +104,6 @@ jobs:
     needs: docker
     if: github.ref == 'refs/heads/master'
     steps:
-      - uses: actions/checkout@v4
-
-      # Sync config files to ECS (docker-compose.yml, nginx, cloudflared)
-      - name: Sync config files to ECS
-        uses: appleboy/scp-action@v0
-        with:
-          host: ${{ secrets.ECS_HOST }}
-          username: ${{ secrets.ECS_USER }}
-          key: ${{ secrets.ECS_SSH_KEY }}
-          source: "docker-compose.prod.yml,nginx,cloudflared"
-          target: /opt/wiki/
-
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -126,6 +114,15 @@ jobs:
             set -e
             echo "=== Wiki Deploy — $(date '+%Y-%m-%d %H:%M:%S') ==="
             cd /opt/wiki
+
+            # Patch compose file: ensure deepseek.key volume mount exists
+            if ! grep -q "deepseek.key" docker-compose.prod.yml; then
+              echo "[*] Adding deepseek.key mount to compose file..."
+              sed -i '/- uploads:\/app\/uploads/a\      - ./deepseek.key:/app/deepseek.key:ro' docker-compose.prod.yml
+              echo "[✓] Mount added"
+            else
+              echo "[✓] deepseek.key mount already present"
+            fi
 
             # Ensure deepseek.key exists (for DeepSeek AI API)
             # Docker creates a directory if the file doesn't exist — remove it first
