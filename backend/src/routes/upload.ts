@@ -4,6 +4,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config';
 import { authMiddleware, bloggerOnly } from '../middleware/auth';
+import { execute } from '../db';
 import fs from 'fs';
 import https from 'https';
 import http from 'http';
@@ -16,13 +17,29 @@ if (!fs.existsSync(uploadDir)) {
 // Subdirectories for different file types
 const imagesDir = path.join(uploadDir, 'images');
 const videosDir = path.join(uploadDir, 'videos');
+const filesDir = path.join(uploadDir, 'files');
 if (!fs.existsSync(imagesDir)) fs.mkdirSync(imagesDir, { recursive: true });
 if (!fs.existsSync(videosDir)) fs.mkdirSync(videosDir, { recursive: true });
+if (!fs.existsSync(filesDir)) fs.mkdirSync(filesDir, { recursive: true });
+
+// Allowed extensions
+const imageExts = /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i;
+const videoExts = /\.(mp4|webm|ogg|mov|avi|mkv)$/i;
+const docExts = /\.(pdf|docx?|xlsx?|pptx?|md|txt|csv|json|xml|ya?ml|log|zip|rar|7z|gz|tar)$/i;
+
+function classifyExt(ext: string): 'video' | 'document' | 'image' {
+  if (videoExts.test(ext)) return 'video';
+  if (docExts.test(ext)) return 'document';
+  return 'image';
+}
 
 const storage = multer.diskStorage({
   destination: (_req, file, cb) => {
-    const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv)$/i.test(path.extname(file.originalname));
-    cb(null, isVideo ? videosDir : imagesDir);
+    const ext = path.extname(file.originalname);
+    const kind = classifyExt(ext);
+    if (kind === 'video') cb(null, videosDir);
+    else if (kind === 'document') cb(null, filesDir);
+    else cb(null, imagesDir);
   },
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname);
@@ -34,22 +51,20 @@ const upload = multer({
   storage,
   limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB max
   fileFilter: (_req, file, cb) => {
-    const allowedImages = /\.(jpg|jpeg|png|gif|webp|svg|bmp)$/i;
-    const allowedVideos = /\.(mp4|webm|ogg|mov|avi|mkv)$/i;
     const ext = path.extname(file.originalname);
-    if (allowedImages.test(ext) || allowedVideos.test(ext)) {
+    if (imageExts.test(ext) || videoExts.test(ext) || docExts.test(ext)) {
       cb(null, true);
     } else {
-      cb(new Error('仅支持图片 (jpg/png/gif/webp/svg/bmp) 和视频 (mp4/webm/ogg/mov/avi/mkv) 文件'));
+      cb(new Error('不支持的文件格式。支持：图片 (jpg/png/gif/...)、视频 (mp4/webm/...)、文档 (pdf/docx/md/txt/zip/...)'));
     }
   },
 });
 
 const router = Router();
 
-// POST /api/upload — upload image or video (blogger only)
+// POST /api/upload — upload any file (blogger only)
 router.post('/', authMiddleware, bloggerOnly, (req: Request, res: Response): void => {
-  upload.single('file')(req, res, (err: unknown) => {
+  upload.single('file')(req, res, async (err: unknown) => {
     if (err) {
       res.status(400).json({ success: false, message: (err as Error).message });
       return;
@@ -59,15 +74,37 @@ router.post('/', authMiddleware, bloggerOnly, (req: Request, res: Response): voi
       return;
     }
 
-    const isVideo = /\.(mp4|webm|ogg|mov|avi|mkv)$/i.test(path.extname(req.file.filename));
-    const url = `/uploads/${isVideo ? 'videos' : 'images'}/${req.file.filename}`;
+    const ext = path.extname(req.file.filename);
+    const kind = classifyExt(ext);
+    const subdir = kind === 'video' ? 'videos' : kind === 'document' ? 'files' : 'images';
+    const url = `/uploads/${subdir}/${req.file.filename}`;
+
+    let fileId: number | null = null;
+
+    // Store document metadata in the files table
+    if (kind === 'document') {
+      try {
+        const result = await execute(
+          `INSERT INTO files (uuid_filename, original_name, mime_type, size, uploaded_by)
+           VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+          [req.file.filename, req.file.originalname, req.file.mimetype || 'application/octet-stream', req.file.size, req.user!.userId]
+        );
+        fileId = (result.rows[0] as { id: number }).id;
+      } catch (dbErr) {
+        console.error('[upload] Failed to insert file record:', dbErr);
+        // File is saved to disk; missing DB record is non-fatal but logged
+      }
+    }
+
     res.json({
       success: true,
       data: {
         url,
         filename: req.file.filename,
+        originalName: req.file.originalname,
         size: req.file.size,
-        type: isVideo ? 'video' : 'image',
+        type: kind,
+        fileId: fileId ?? undefined,
       },
     });
   });

@@ -9,6 +9,7 @@ import {
   AuthResponse,
   GameScore,
   LeaderboardEntry,
+  UploadedFile,
 } from '@/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
@@ -257,6 +258,47 @@ export const uploadApi = {
     }
     return data;
   },
+};
+
+// ===== Files API =====
+export const filesApi = {
+  /** Upload any file (image, video, document) — unified upload endpoint */
+  upload: async (file: File): Promise<ApiResponse<{
+    url: string;
+    filename: string;
+    originalName: string;
+    size: number;
+    type: 'image' | 'video' | 'document';
+    fileId?: string;
+  }>> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const url = `${API_BASE}/upload`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: formData,
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Upload failed');
+    }
+    return data;
+  },
+
+  /** List uploaded files (paginated, optional post filter) */
+  list: (page = 1, postId?: string, pageSize = 20): Promise<PaginatedResponse<UploadedFile>> => {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+    if (postId) params.set('postId', postId);
+    return request<UploadedFile[]>(`/files?${params.toString()}`) as Promise<PaginatedResponse<UploadedFile>>;
+  },
+
+  /** Delete a file (blogger only) */
+  delete: (fileId: string): Promise<ApiResponse<null>> =>
+    request<null>(`/files/${fileId}`, {
+      method: 'DELETE',
+      headers: authHeaders(),
+    }),
 };
 
 // ===== AI API =====

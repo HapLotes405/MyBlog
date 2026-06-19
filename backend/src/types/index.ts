@@ -165,3 +165,15 @@ export interface PersonalInfoRow {
   interests: Interest[];        // JSONB → auto-parsed
   photos: string[];             // JSONB → auto-parsed
 }
+
+export interface FileRow {
+  id: number;
+  uuid_filename: string;
+  original_name: string;
+  mime_type: string;
+  size: number;
+  post_id: number | null;
+  uploaded_by: number;
+  download_count: number;
+  created_at: string | Date;
+}

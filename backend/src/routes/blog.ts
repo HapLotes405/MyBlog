@@ -1,8 +1,11 @@
 import { Router, Request, Response } from 'express';
+import path from 'path';
+import fs from 'fs';
 import { queryAll, queryOne, execute } from '../db';
 import { authMiddleware, bloggerOnly } from '../middleware/auth';
 import { userRowToUser, toDateString } from '../utils';
-import { UserRow, BlogRow } from '../types';
+import { UserRow, BlogRow, FileRow } from '../types';
+import { config } from '../config';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
@@ -203,6 +206,21 @@ router.delete('/:id', authMiddleware, bloggerOnly, async (req: Request, res: Res
       res.status(404).json({ success: false, message: '文章不存在' });
       return;
     }
+
+    // Clean up associated files from disk
+    const files = await queryAll('SELECT * FROM files WHERE post_id = $1', [row.id]) as unknown as FileRow[];
+    const filesDir = path.join(path.resolve(config.uploadDir), 'files');
+    for (const f of files) {
+      const filePath = path.join(filesDir, f.uuid_filename);
+      if (fs.existsSync(filePath)) {
+        try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+      }
+    }
+    // Delete file records (cascade would SET NULL, but we want to delete)
+    if (files.length > 0) {
+      await execute('DELETE FROM files WHERE post_id = $1', [row.id]);
+    }
+
     await execute('DELETE FROM blogs WHERE id = $1', [row.id]);
     res.json({ success: true, data: null, message: '文章已删除' });
   } catch (err) {

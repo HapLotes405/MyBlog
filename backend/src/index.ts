@@ -15,6 +15,7 @@ import profileRoutes from './routes/profile';
 import uploadRoutes from './routes/upload';
 import userRoutes from './routes/user';
 import gameScoreRoutes from './routes/game-scores';
+import filesRoutes from './routes/files';
 import aiRoutes from './routes/ai';
 
 async function main(): Promise<void> {
@@ -44,6 +45,7 @@ async function main(): Promise<void> {
   app.use('/api', interactionRoutes);
   app.use('/api/profile', profileRoutes);
   app.use('/api/upload', uploadRoutes);
+  app.use('/api/files', filesRoutes);
   app.use('/api/user', userRoutes);
   app.use('/api/game-scores', gameScoreRoutes);
   app.use('/', aiRoutes);

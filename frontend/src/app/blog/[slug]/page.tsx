@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { renderMarkdown } from '@/utils/markdown';
 import SafeHTML from '@/components/common/SafeHTML';
 import CommentSection from '@/components/blog/CommentSection';
+import FilePreviewEnhancer from '@/components/blog/FilePreviewEnhancer';
 import styles from './page.module.css';
 
 // Session-based view tracking: only count a view once per slug per session
@@ -189,6 +190,7 @@ export default function BlogDetailPage() {
           html={contentHtml}
           className={`${styles.content} md-content`}
         />
+        <FilePreviewEnhancer />
       </article>
 
       <CommentSection postSlug={post.slug} />

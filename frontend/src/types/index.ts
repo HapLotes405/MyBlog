@@ -124,3 +124,17 @@ export interface LeaderboardEntry {
   timeMs: number;
   createdAt: string;
 }
+
+export interface UploadedFile {
+  id: string;
+  uuidFilename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  postId: string | null;
+  uploadedBy: string;
+  downloadCount: number;
+  createdAt: string;
+  url: string;
+  extension: string;
+}

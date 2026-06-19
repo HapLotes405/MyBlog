@@ -131,6 +131,23 @@ export async function runMigrations(): Promise<void> {
     `);
     await client.query('CREATE INDEX IF NOT EXISTS idx_game_scores_level_time ON game_scores(level, time_ms ASC)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_game_scores_user ON game_scores(user_id)');
+
+    // File attachments for blog posts
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS files (
+        id SERIAL PRIMARY KEY,
+        uuid_filename TEXT UNIQUE NOT NULL,
+        original_name TEXT NOT NULL,
+        mime_type TEXT NOT NULL DEFAULT 'application/octet-stream',
+        size BIGINT NOT NULL DEFAULT 0,
+        post_id INTEGER REFERENCES blogs(id) ON DELETE SET NULL,
+        uploaded_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        download_count INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await client.query('CREATE INDEX IF NOT EXISTS idx_files_post ON files(post_id)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_files_uploaded_by ON files(uploaded_by)');
   });
 
   console.log('[DB] Migrations completed successfully.');

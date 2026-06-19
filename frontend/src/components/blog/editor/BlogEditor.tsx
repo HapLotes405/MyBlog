@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { BlogPost } from '@/types';
-import { blogApi, uploadApi } from '@/services/api';
+import { blogApi, uploadApi, filesApi } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { renderMarkdown } from '@/utils/markdown';
 import SafeHTML from '@/components/common/SafeHTML';
@@ -102,6 +102,7 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
+  const fileDocInputRef = useRef<HTMLInputElement>(null);
 
   const [title, setTitle] = useState(post?.title || '');
   const [summary, setSummary] = useState(post?.summary || '');
@@ -226,9 +227,15 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
     for (let i = 0; i < files.length; i++) {
       if (files[i].type.startsWith('image/')) {
         insertLocalImage(files[i]);
+      } else if (files[i].type.startsWith('video/')) {
+        // Videos go through the existing handleFileUpload flow
+        setMessage(`视频文件请使用"插入视频"按钮上传`);
+      } else {
+        // Documents and other files → upload directly
+        uploadDocFileDirect(files[i]);
       }
     }
-  }, [insertLocalImage]);
+  }, [insertLocalImage, uploadDocFileDirect]);
 
   // ===== Save (with image processing) =====
   const handleSave = async () => {
@@ -417,6 +424,57 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
     }
   };
 
+  // ===== Document file upload (PDF, DOCX, MD, etc.) =====
+  const handleFileDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const res = await filesApi.upload(file);
+      if (res.success && res.data) {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
+        const baseUrl = apiBase.replace(/\/api$/, '');
+        const fileUrl = `${baseUrl}${res.data.url}`;
+        const fileName = res.data.originalName || file.name;
+        const fileMd = `[📄 ${fileName}](${fileUrl})`;
+        const ta = textareaRef.current;
+        if (ta) {
+          surroundSelection(ta, setContent, '', fileMd, '');
+        } else {
+          setContent((prev) => prev + '\n' + fileMd + '\n');
+        }
+        setMessage(`文件 "${fileName}" 上传成功！`);
+      }
+    } catch {
+      setMessage('文件上传失败');
+    } finally {
+      setUploading(false);
+      if (fileDocInputRef.current) fileDocInputRef.current.value = '';
+    }
+  };
+
+  // Direct upload for drag-drop (no file input event)
+  const uploadDocFileDirect = useCallback(async (file: File) => {
+    try {
+      const res = await filesApi.upload(file);
+      if (res.success && res.data) {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
+        const baseUrl = apiBase.replace(/\/api$/, '');
+        const fileUrl = `${baseUrl}${res.data.url}`;
+        const fileName = res.data.originalName || file.name;
+        const fileMd = `[📄 ${fileName}](${fileUrl})`;
+        const ta = textareaRef.current;
+        if (ta) {
+          surroundSelection(ta, setContent, '', fileMd, '');
+        } else {
+          setContent((prev) => prev + '\n' + fileMd + '\n');
+        }
+      }
+    } catch {
+      setMessage(`文件 "${file.name}" 上传失败`);
+    }
+  }, []);
+
   // ===== Keyboard =====
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
@@ -476,6 +534,15 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
             {uploading ? '上传中...' : '插入视频'}
           </button>
           <input ref={videoInputRef} type="file" accept="video/*" onChange={(e) => handleFileUpload(e, true)} style={{ display: 'none' }} />
+          <button className={styles.btn} onClick={() => fileDocInputRef.current?.click()} disabled={uploading}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            {uploading ? '上传中...' : '上传文件'}
+          </button>
+          <input ref={fileDocInputRef} type="file" accept=".pdf,.docx,.doc,.xlsx,.xls,.pptx,.ppt,.md,.txt,.csv,.json,.xml,.yaml,.yml,.log,.zip,.rar,.7z,.gz,.tar" onChange={handleFileDocUpload} style={{ display: 'none' }} />
           <button className={styles.btn} onClick={handleDownload}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
@@ -576,7 +643,7 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
         <div className={styles.editorArea}>
           {isDragOver && (
             <div className={styles.dropOverlay}>
-              <span>📁 释放以插入图片</span>
+              <span>📁 释放以插入图片或文件</span>
             </div>
           )}
 
