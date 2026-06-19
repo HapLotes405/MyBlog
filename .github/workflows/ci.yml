@@ -104,6 +104,18 @@ jobs:
     needs: docker
     if: github.ref == 'refs/heads/master'
     steps:
+      # ---- Sync compose + config files to ECS ----
+      - name: Sync config files to ECS
+        uses: appleboy/scp-action@v0
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          source: docker-compose.prod.yml,nginx,cloudflared
+          target: /opt/wiki/
+          strip_components: 0
+
+      # ---- Deploy ----
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -114,15 +126,6 @@ jobs:
             set -e
             echo "=== Wiki Deploy — $(date '+%Y-%m-%d %H:%M:%S') ==="
             cd /opt/wiki
-
-            # Patch compose file: ensure deepseek.key volume mount exists
-            if ! grep -q "deepseek.key" docker-compose.prod.yml; then
-              echo "[*] Adding deepseek.key mount to compose file..."
-              sed -i '/- uploads:\/app\/uploads/a\      - ./deepseek.key:/app/deepseek.key:ro' docker-compose.prod.yml
-              echo "[✓] Mount added"
-            else
-              echo "[✓] deepseek.key mount already present"
-            fi
 
             # Ensure deepseek.key exists (for DeepSeek AI API)
             # Docker creates a directory if the file doesn't exist — remove it first
@@ -135,28 +138,22 @@ jobs:
               echo "[!] DEEPSEEK_API_KEY secret not set — AI features will not work"
             fi
 
-            # Login to GHCR (optional — skip if GHCR_PAT not set)
-            if [ -n "${{ secrets.GHCR_PAT }}" ]; then
-              echo "[*] Logging in to GHCR..."
-              echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-              echo "[✓] Logged in"
-            fi
+            # Login to GHCR via GITHUB_TOKEN (already has packages:write scope)
+            echo "[*] Logging in to GHCR..."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            echo "[✓] Logged in"
 
             # Pull latest images
             echo "[*] Pulling images..."
             docker compose -f docker-compose.prod.yml pull
 
-            # Recreate backend to pick up new deepseek.key mount
-            echo "[*] Recreating backend..."
-            docker compose -f docker-compose.prod.yml up -d --force-recreate backend
-
-            # Start remaining services
+            # Start services
             echo "[*] Starting services..."
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
             # Health check
             echo "[*] Waiting for backend..."
-            for i in $(seq 1 15); do
+            for i in $(seq 1 20); do
               if docker compose -f docker-compose.prod.yml ps backend 2>/dev/null | grep -q 'healthy'; then
                 echo "[✓] Backend healthy!"
                 break
