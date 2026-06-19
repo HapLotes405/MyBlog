@@ -198,6 +198,28 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
     }
   }, [insertLocalImage]);
 
+  // Direct upload for drag-drop (no file input event)
+  const uploadDocFileDirect = useCallback(async (file: File) => {
+    try {
+      const res = await filesApi.upload(file);
+      if (res.success && res.data) {
+        const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
+        const baseUrl = apiBase.replace(/\/api$/, '');
+        const fileUrl = `${baseUrl}${res.data.url}`;
+        const fileName = res.data.originalName || file.name;
+        const fileMd = `[📄 ${fileName}](${fileUrl})`;
+        const ta = textareaRef.current;
+        if (ta) {
+          surroundSelection(ta, setContent, '', fileMd, '');
+        } else {
+          setContent((prev) => prev + '\n' + fileMd + '\n');
+        }
+      }
+    } catch {
+      setMessage(`文件 "${file.name}" 上传失败`);
+    }
+  }, []);
+
   // ===== Drag-and-drop handlers =====
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -452,28 +474,6 @@ export default function BlogEditor({ post, isNew }: BlogEditorProps) {
       if (fileDocInputRef.current) fileDocInputRef.current.value = '';
     }
   };
-
-  // Direct upload for drag-drop (no file input event)
-  const uploadDocFileDirect = useCallback(async (file: File) => {
-    try {
-      const res = await filesApi.upload(file);
-      if (res.success && res.data) {
-        const apiBase = process.env.NEXT_PUBLIC_API_URL || '/api';
-        const baseUrl = apiBase.replace(/\/api$/, '');
-        const fileUrl = `${baseUrl}${res.data.url}`;
-        const fileName = res.data.originalName || file.name;
-        const fileMd = `[📄 ${fileName}](${fileUrl})`;
-        const ta = textareaRef.current;
-        if (ta) {
-          surroundSelection(ta, setContent, '', fileMd, '');
-        } else {
-          setContent((prev) => prev + '\n' + fileMd + '\n');
-        }
-      }
-    } catch {
-      setMessage(`文件 "${file.name}" 上传失败`);
-    }
-  }, []);
 
   // ===== Keyboard =====
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
