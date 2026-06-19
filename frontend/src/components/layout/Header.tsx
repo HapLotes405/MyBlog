@@ -25,62 +25,65 @@ export default function Header() {
   const displayName = user ? (user.nickname || user.username) : '登录';
 
   return (
-    <header className={styles.header}>
-      <div className={styles.headerInner}>
-        <Link href="/" className={styles.logo}>
-          {"HapLotes405's Wiki"}
-        </Link>
-
-        <nav className={styles.nav}>
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`${styles.navLink} ${isActive(link.href) ? styles.navLinkActive : ''}`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        <div className={styles.actions}>
-          {isBlogger && (
-            <Link href="/blog/new" className={styles.writeBtn}>
-              写文章
-            </Link>
-          )}
-          <Link href={user ? '/profile' : '/login'} className={styles.userArea}>
-            <img
-              className={styles.avatar}
-              src={user?.avatar || '/default-avatar.svg'}
-              alt="avatar"
-            />
-            <span className={styles.userName}>{displayName}</span>
+    <>
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <Link href="/" className={styles.logo}>
+            {"HapLotes405's Wiki"}
           </Link>
+
+          <nav className={styles.nav}>
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`${styles.navLink} ${isActive(link.href) ? styles.navLinkActive : ''}`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+
+          <div className={styles.actions}>
+            {isBlogger && (
+              <Link href="/blog/new" className={styles.writeBtn}>
+                写文章
+              </Link>
+            )}
+            <Link href={user ? '/profile' : '/login'} className={styles.userArea}>
+              <img
+                className={styles.avatar}
+                src={user?.avatar || '/default-avatar.svg'}
+                alt="avatar"
+              />
+              <span className={styles.userName}>{displayName}</span>
+            </Link>
+            {user && (
+              <button className={styles.loginBtn} onClick={logout}>
+                退出
+              </button>
+            )}
+          </div>
+
+          {/* 移动端可见的退出按钮 */}
           {user && (
-            <button className={styles.loginBtn} onClick={logout}>
+            <button className={styles.mobileLogoutBtn} onClick={logout} title="退出登录">
               退出
             </button>
           )}
-        </div>
-
-        {/* 移动端可见的退出按钮 */}
-        {user && (
-          <button className={styles.mobileLogoutBtn} onClick={logout} title="退出登录">
-            退出
+          <button
+            className={styles.menuBtn}
+            onClick={() => setMobileOpen(!mobileOpen)}
+            aria-label="Toggle menu"
+          >
+            <span />
+            <span />
+            <span />
           </button>
-        )}
-        <button
-          className={styles.menuBtn}
-          onClick={() => setMobileOpen(!mobileOpen)}
-          aria-label="Toggle menu"
-        >
-          <span />
-          <span />
-          <span />
-        </button>
-      </div>
+        </div>
+      </header>
 
+      {/* 移动端导航 — 渲染在 header 外部，避免 backdrop-filter 创建的新包含块导致 fixed 定位失效 */}
       <div className={`${styles.mobileNav} ${mobileOpen ? styles.open : ''}`}>
         {navLinks.map((link) => (
           <Link
@@ -128,6 +131,6 @@ export default function Header() {
           </Link>
         )}
       </div>
-    </header>
+    </>
   );
 }
