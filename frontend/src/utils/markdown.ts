@@ -181,8 +181,11 @@ md.block.ruler.before('fence', 'admonition', (state, startLine, endLine, silent)
   let nextLine = startLine + 1;
   const bodyLines: string[] = [];
   while (nextLine < endLine) {
+    // Empty line → skip
+    if (state.isEmpty(nextLine)) { nextLine++; continue; }
+    // Non-empty line without 4-space indentation → admonition body ends
+    if (state.tShift[nextLine] < 4) break;
     const content = state.getLines(nextLine, nextLine + 1, 4, false);
-    if (content.trim() === '') { nextLine++; continue; }
     bodyLines.push(content.trim());
     nextLine++;
   }
