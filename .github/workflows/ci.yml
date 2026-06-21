@@ -106,7 +106,7 @@ jobs:
     steps:
       # ---- Sync compose + config files to ECS ----
       - name: Sync config files to ECS
-        uses: appleboy/scp-action@v0.1.9
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.ECS_HOST }}
           username: ${{ secrets.ECS_USER }}
