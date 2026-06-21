@@ -104,17 +104,6 @@ jobs:
     needs: docker
     if: github.ref == 'refs/heads/master'
     steps:
-      # ---- Sync compose + config files to ECS ----
-      - name: Sync config files to ECS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.ECS_HOST }}
-          username: ${{ secrets.ECS_USER }}
-          key: ${{ secrets.ECS_SSH_KEY }}
-          source: docker-compose.prod.yml,nginx,cloudflared
-          target: /opt/wiki/
-          strip_components: 0
-
       # ---- Deploy ----
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
